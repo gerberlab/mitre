@@ -1,5 +1,9 @@
 include mitre/template.html
 include mitre/quick_test.cfg
 include README.md
+include *.cfg
+include LICENSE.txt
+recursive-include docs * 
 include mitre/efficient_likelihoods.c
+include mitre/efficient_likelihoods.pyx
 recursive-include mitre/example_data * 

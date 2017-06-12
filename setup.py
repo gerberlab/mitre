@@ -41,10 +41,10 @@ classifiers= [
     
 setup(
     name='mitre',
-    version='0.9beta1',
+    version='0.9beta2',
     description='Microbiome Interpretable Temporal Rule Engine',
     long_description=readme(),
-    url='http://bitbucket.org/elb87/python_rules',
+    url='http://github.com/gerberlab/mitre',
     author='Eli Bogart',
     author_email='ebogart@bwh.harvard.edu',
     license='GPLv3',
