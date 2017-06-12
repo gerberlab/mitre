@@ -1,0 +1,41 @@
+Subject_ID,GestationalDayOfDelivery,GestationalWeekOfDelivery,PretermBirth,Race,Ethnicity,BeforeWeek37,PretermNotMarginal
+Subject_T19,279,39.9,False,Asian-Japanese,non-hispanic,False,False
+Subject_T1,260,37.1,False,American Indian,non-hispanic,False,False
+Subject_T10,274,39.1,False,Caucasian,hispanic,False,False
+Subject_T20,279,39.9,False,Caucasian,hispanic,False,False
+Subject_T27,284,40.6,False,Caucasian,hispanic,False,False
+Subject_T24,281,40.1,False,Caucasian,hispanic,False,False
+Subject_P4,244,34.9,True,Caucasian,hispanic,True,True
+Subject_P5,247,35.3,True,American Indian,non-hispanic,True,True
+Subject_M3,258,36.9,True,Asian-Unspecified,non-hispanic,False,False
+Subject_T3,263,37.6,False,Pacific Islander,non-hispanic,False,False
+Subject_P7,253,36.1,True,American Indian,non-hispanic,False,True
+Subject_T28,288,41.1,False,Caucasian,hispanic,False,False
+Subject_T4,264,37.7,False,Caucasian,hispanic,False,False
+Subject_T21,279,39.9,False,other,non-hispanic,False,False
+Subject_T5,264,37.7,False,Black,non-hispanic,False,False
+Subject_T25,282,40.3,False,Caucasian,hispanic,False,False
+Subject_T22,279,39.9,False,Caucasian,non-hispanic,False,False
+Subject_T13,276,39.4,False,Caucasian,hispanic,False,False
+Subject_P3,211,30.1,True,Black,non-hispanic,True,True
+Subject_M1,254,36.3,True,Pacific Islander,non-hispanic,False,False
+Subject_T2,262,37.4,False,Caucasian,non-hispanic,False,False
+Subject_T6,268,38.3,False,Caucasian,hispanic,False,False
+Subject_T12,275,39.3,False,other,0,False,False
+Subject_T11,275,39.3,False,Caucasian,non-hispanic,False,False
+Subject_M5,259,37.0,False,other,non-hispanic,False,False
+Subject_T17,278,39.7,False,Caucasian,hispanic,False,False
+Subject_P1,151,21.6,True,Pacific Islander,non-hispanic,True,True
+Subject_P2,209,29.9,True,Caucasian,hispanic,True,True
+Subject_T16,277,39.6,False,other,non-hispanic,False,False
+Subject_T7,269,38.4,False,Asian-Chinese,non-hispanic,False,False
+Subject_P6,251,35.9,True,Caucasian,non-hispanic,True,True
+Subject_T26,283,40.4,False,Caucasian,non-hispanic,False,False
+Subject_M4,258,36.9,True,Caucasian,non-hispanic,False,False
+Subject_T8,272,38.9,False,Indian,non-hispanic,False,False
+Subject_M2,255,36.4,True,other,non-hispanic,False,False
+Subject_T9,273,39.0,False,Caucasian,non-hispanic,False,False
+Subject_T18,278,39.7,False,Caucasian,non-hispanic,False,False
+Subject_T14,276,39.4,False,Caucasian,non-hispanic,False,False
+Subject_T23,280,40.0,False,Caucasian,hispanic,False,False
+Subject_T15,276,39.4,False,other,non-hispanic,False,False

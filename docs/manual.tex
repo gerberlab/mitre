@@ -1,0 +1,874 @@
+\documentclass[12pt]{report}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{rotating}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{lmodern}
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
+
+\title{MITRE 1.0 user's manual}
+\author{Eli Bogart}
+\date{\today}
+\begin{document}
+\maketitle
+\tableofcontents
+%\listoffigures
+%\listoftables
+\lstset{
+basicstyle=\small, 
+stringstyle=\ttfamily,
+language={},
+showstringspaces=false,
+frame=single,
+upquote=True,
+breaklines=True,
+breakatwhitespace=True,
+numbers=left
+} 
+\lstdefinelanguage{Ini}
+{
+    basicstyle=\ttfamily\small,
+    columns=fullflexible,
+    morecomment=[s][\color{blue}\bfseries]{[}{]},
+    morecomment=[l]{\#},
+    morecomment=[l]{;},
+    commentstyle=\color{gray}\ttfamily,
+    morekeywords={},
+    otherkeywords={=,:},
+    keywordstyle={\bfseries}
+}
+
+\chapter{Introduction}
+
+MITRE learns interpretable predictive rules that classify hosts or
+predict host outcomes based on longitudinal observations of their
+microbiome.  For a full explanation of what this means, why it is
+important, and how MITRE does it, refer to ``MITRE: predicting host
+status from microbiota time-series data'', Elijah Bogart and Georg
+Gerber (in preparation), and the associated supplementary technical
+note. For a quick tutorial introduction, see the \texttt{README.md}
+file, or go to \url{https://github.com/gerberlab/mitre}.  This manual
+describes how to install and run MITRE, how to format your own data
+for use with MITRE, what types of output are available, and the
+options that may be specified in a MITRE configuration file to control
+its execution.
+
+\section{Installation}
+The recommended installation procedure is to use \texttt{pip} to
+download MITRE (and any dependencies not already installed) from the
+Python Package Index:
+\begin{quote}
+  \texttt{pip install mitre}.
+\end{quote}
+To install from
+source, run
+\begin{quote}
+  \texttt{git clone https://github.com/gerberlab/mitre.git}
+\end{quote}
+followed by
+\begin{quote}
+  \texttt{pip install mitre/}
+\end{quote} 
+(note the trailing slash.)  To
+verify that installation was succcessful, run
+\begin{quote}
+  \texttt{mitre -{}-test}
+\end{quote}
+  A series of status messages should be displayed, followed by `Test
+  problem completed successfully.'
+
+You will need Python 2.7 installed to install and run MITRE. (Note
+that recent versions of Python 2.7 provide the \texttt{pip} command by
+default.) Only Mac and Linux systems are supported at this time.
+
+\section{Usage}
+To use MITRE, create a configuration file specifying input data, the
+operations to be performed, and output types. Then run \begin{quote} \texttt{mitre
+  path\_to\_configuration\_file} \end{quote} The MITRE configuration file
+options, and what happens when MITRE reads a configuration file, are
+described in detail in chapter \ref{configuration} below. Rather than
+writing a configuration file from scratch, it may be easiest to modify
+a sample configuration file to suit your needs; an example file is
+provided in chapter \ref{sample} below.
+
+
+\chapter{Formatting input data for MITRE}
+This chapter describes, with examples, how to prepare input data files
+for MITRE.
+
+\section{Required files}
+\subsection{Abundance table}\label{abundance_data}
+The abundance data should be provided as a comma-separated table,
+with the first row providing OTU IDs and the first column providing
+sample IDs. 
+\begin{lstlisting}[caption=Example abundance data table]
+  "","OTU1","OTU2"
+  "SampleID1",768,46
+  "SampleID2",17,7545
+\end{lstlisting}
+(Quotes around strings are not necessary.)
+
+\subsection{Sample metadata table}\label{sample_metadata}
+The sample metadata table specifies an associated subject ID and
+timepoint for each sample ID. It should be given as a comma-separated
+table with no header row. No particular ordering is expected.
+\begin{lstlisting}[caption=Example sample metadata table]
+  SampleID1,SubjectID1,0
+  SampleID2,SubjectID1,27
+  SampleID3,SubjectID2,2
+\end{lstlisting}
+
+\subsection{Subject data table}\label{subject_data}
+The subject data table gives information about each subject,
+(including the value of whatever variable will be used as the outcome
+that MITRE will try to predict, though that does not need to be
+explicitly marked.) It should be given as a comma-separated table with
+a header row, whose first column is the subject ID. (The first field
+in the header row is ignored.) Values may be either strings or numbers
+(but variables that appear to be Boolean may be converted to 0/1; see
+the note for the `outcome\_positive\_value' option in section
+\ref{data} below.)
+\begin{lstlisting}[caption=Example subject data table]
+  subjectID, delivery_mode, allergy, week_of_delivery, exposure_count
+  SubjectID1, cesarean, True, 38.1, 5
+  SubjectID2, vaginal, True, 39.9, 1
+\end{lstlisting}
+
+\subsection{Pplacer results}\label{jplace_file}
+This should be the \texttt{.jplace} file created by placing the
+representative seuqences from each OTU on a reference tree of known
+16S dequences using the \texttt{pplacer} package in maximum likelihood
+mode.
+
+\section{Optional files}
+\subsection{Sequence key}\label{sequence_key}
+If this FASTA file of unique sequences is given, each OTU identifer in
+the abundance data table that exactly matches one of the sequences
+will be replaced with the identifier for that sequence in the FASTA
+file. The same will be done for OTU identifiers in the placement table
+described below, if it is given. This is useful when working with
+tables from DADA2 that use the inferred exact sequences as
+row and column headers.
+
+\subsection{Pplacer taxonomy table}\label{pplacer_taxa_table}
+A comma-separated-value taxonomy table from the \texttt{pplacer}
+reference package used for placement of the OTUs. See
+\url{http://fhcrc.github.io/taxtastic/refpkg.html} for a description
+of the \texttt{pplacer} reference package components. The following
+listing is provided as an aid to identifying the appropriate file, not
+as a complete example of its necessary properties. 
+
+\begin{lstlisting}[caption=Beginning of an example taxonomy table file]
+"tax_id","parent_id","rank","tax_name","root","below_root", "superkingdom","superphylum","phylum","subphylum", "class","subclass","order","below_order", "suborder","family","below_family","subfamily", "tribe","genus","below_genus","subgenus", "species_group","species_subgroup","species"
+"1","1","root","root","1","","","","","","", "","","","","","","","","","","","","",""
+"131567","1","below_root","cellular organisms","1","131567","","","","","","","", "","","","","","","","","","","",""
+"2157","131567","superkingdom","Archaea","1","131567", "2157","","","","","","", "","","","","","","","","","","",""
+"2","131567","superkingdom","Bacteria","1","131567", "2","","","","","","","","", "","","","","","","","","",""
+\end{lstlisting}
+
+\subsection{Pplacer sequence information}\label{pplacer_seq_info}
+A comma-separated-value table from the \texttt{pplacer}
+reference package used for placement of the OTUs, giving information
+about the sequences included in the reference package. See 
+\url{http://fhcrc.github.io/taxtastic/refpkg.html} for a description
+of the \texttt{pplacer} reference package components.
+The following
+listing is provided as an aid to identifying the appropriate file, not
+as a complete example of its necessary properties. 
+\begin{lstlisting}[caption=Beginning of an example sequence information file]
+seqname,tax_id,species_name
+S000438419,53635,Acidimicrobium ferrooxidans
+S001416053,121039,Ferrimicrobium acidiphilum
+S000750001,209649,Ferrithrix thermotolerans
+\end{lstlisting}
+
+\subsection{Placement table}\label{placement_table}
+A comma-separated table giving predicted taxonomies for the OTUs in
+the abundance table, with a header row listing the taxonomic
+levels at which placements are predicted, from coarsest to finest (last two entries must be ``Genus''
+and ``Species''), and with the OTU identifiers in the first column, e.g.:
+\begin{lstlisting}[caption=Example placement table]
+  "","Kingdom","Phylum","Class","Order","Family","Genus", "Species"
+  "OTU1","Bacteria","Bacteroidetes","Bacteroidia", "Bacteroidales","Bacteroidaceae","Bacteroides","dorei"
+  "OTU2","Bacteria","Verrucomicrobia","Verrucomicrobiae", "Verrucomicrobiales","Verrucomicrobiaceae", "Akkermansia",NA
+\end{lstlisting}
+When a placement for an OTU was not predicted at a particular level,
+the entry should be NA or empty.  Note that this is the format that
+results from passing the output of \texttt{dada2}'s
+\texttt{addSpecies} function to \texttt{write.csv}.
+
+\chapter{Quick guide to available MITRE output types}
+MITRE offers a number of different output options. This section
+provides a quick guide to how each may be specified in the configuration
+file.
+
+To generate...
+\begin{itemize}
+\item \textbf{An interactive visualization of the MITRE results as an
+  HTML file:} Set `gui\_output' in section `postprocessing' to True.
+\item \textbf{The point estimate of the best rule set, distribution of
+  rule set lengths, and the Bayes factor in favor of the empty rule
+  set, as a text file:} Set `quick\_summary' in section
+  `postprocessing' to True.
+\item \textbf{All of the above, plus the most frequent clusters of
+  similar rule sets seen in the posterior distribution, as a text
+  file:} Set `full\_summary' in section `postprocessing' to True.
+\item \textbf{A table of Bayes factors indicating the strength of the
+  evidence that particular variables or detectors are involved in the
+  true rule list, as a text file:} Set `bayes\_factor\_table' in
+  section `postprocessing' to True.
+\item \textbf{A table describing taxonomically the OTU or group of
+  bacteria corresponding to each variable in the model, as a text
+  file:} Specify an appropriate `taxonomy\_source' and input data
+  files in section `data', and set `aggregate\_on\_phylogeny' to True
+  in section `preprocessing'.
+\item \textbf{Cross-validated accuracy assessments for the MITRE point
+  and ensemble estimators, as text files:} Include either a `crossvalidation' or
+  `leave\_one\_out' section in the configuration file, with all
+  required options given there (see sections \ref{crossvalidation} and
+  \ref{leave_one_out} below.)
+\item \textbf{Convergence diagnostic plots as PDF files:} Set
+  `mixing\_diagnostics' in section `postprocessing' to True.
+\item \textbf{The full suite of outputs necessary to compare MITRE
+  performance against alternative methods:} See section
+  \ref{benchmarking} below.
+\end{itemize}  
+
+Note that in almost all output text files, rules will be expressed in
+terms of internal variable identifiers (which may be the names of
+input OTUs, or numbers representing edges in the phylogenetic tree.)
+
+These may be looked up in the variable annotations file (if it has
+been generated) which provides a taxonomy-based label for each such
+variable and, for each variable that represents a higher-level group,
+a list of the OTUs included in that group.
+
+The interactive visualization provides descriptions of the variables
+visualized detector refers to; where a visualized detector represents
+a higher-level group, the interface will draw the subtree of the
+phylogeny corresponding to the group.
+
+\chapter{Configuration options}\label{configuration}
+\section{How a configuration file is processed}
+When MITRE reads a configuration file, it attempts
+to carry out each of the following operations, if the
+corresponding sections of the configuration file are present:
+
+\begin{description}
+\item[preprocessing] Loading, filtering, transforming, and/or
+  annotating the input data, (section \ref{preprocessing})
+\item[model] Preparing a model object with specified
+  parameters (section \ref{model})
+\item[sampling] Drawing samples from the posterior distribution (section
+  \ref{sampling})
+\item[postprocessing] Generating output files, including summaries of
+  the posterior distribution, mixing diagnostics, or the interactive
+  visualization (section \ref{postprocessing})
+\item[crossvalidation] K-fold crossvalidation: splitting the data
+  across a set number of folds, creating and sampling from a model for
+  each fold, assessing the accuracy of the resulting predictive rules
+  for the held-out data, and writing a summary report (section \ref{crossvalidation})
+\item[leave\_one\_out] As above, but performs leave-one-out
+  crossvalidation instead (section \ref{leave_one_out}).
+\item[comparison\_methods] Applying random forest and L1-regularized
+  logistic regression models to predict the outcome, assessing their
+  accuracy by cross-validation, and writing a report (section
+  \ref{comparison_methods}).
+\end{description}
+
+All sections are optional. When applicable, the results of the
+`preprocessing' operation will be supplied to the `model'
+and `comparison\_methods' operations, the results of the `model'
+step will be supplied to the `sampling' step and the
+cross-validation methods, and the results of the `sampling' step
+will be supplied to the `postprocessing' step.
+
+For each operation that depends on an earlier step, however, it is
+possible to oomit the earlier step and instead specify a file of
+previously generated results to be loaded.
+
+The `data' section (\ref{data}) tells MITRE where to find input data files,
+and is required if the `preprocessing' section is present.
+
+The `description' section (\ref{description}) provides information
+about the problem that is used to label output files, and is
+required. The `general' section (\ref{general}) is optional; it
+controls options for MITRE operation that apply across all steps in
+the pipeline.
+
+The `benchmarking' section (\ref{benchmarking}) is special. It
+modifies the normal sequence of operations to apply the comparison
+methods to the dataset after some steps of filtering, but before the
+phylogenetic aggregation process; preprocessing is then completed, and
+cross-validation is performed. This is a convenience method which
+facilitated the benchmarking calculations presented in the MITRE
+manuscript.
+
+\section{General}\label{general}
+Options allowed in section `general' are:
+\begin{description}
+\item[verbose] Boolean, optional. If true, MITRE will print progress
+  messages for most steps, including every MCMC iteration. Internally
+  this sets the log level to \texttt{logging.INFO}. Default: false.
+\end{description}
+
+\section{Description}\label{description}
+Options allowed in section `description' are:
+\begin{description}
+\item[tag] A short string used to generate output filenames. Required.
+\end{description}
+
+\section{Data}\label{data}
+Options allowed in section `data' are:
+\begin{description}
+\item[load\_example] Allowed values are `bokulich', `david',
+  `digiulio' or `karelia'. If one of these values is given,
+  MITRE will load one of the pre-packaged example datasets, consisting
+  of data from, respectively, \begin{itemize}
+  \item Bokulich, N. A., et al., ``Antibiotics, birth mode, and diet
+    shape microbiome maturation during early life'', \textit{Science
+      Translational Medicine} 8(343): 343ra82 (2016)
+  \item David, L. A., et al., ``Diet rapidly and reproducibly alters
+    the human gut microbiome'', \textit{Nature} 505(7484): 559 -- 563
+    (2014)
+  \item DiGiulio, D. B., et al., ``Temporal and spatial variation of
+    the human microbiota during pregnancy'', \textit{PNAS} 112(35):
+    11060 -- 11065 (2015)
+  \item Vatanen, T., et al., ``Variation in Microbiome LPS
+    Immunogenicity Contributes to Autoimmunity in Humans'',
+    \textit{Cell} 165(4): 842 -- 853 (2016),
+\end{itemize}
+reprocessed as described in the MITRE supplementary note.  If this
+option is given, no other options in this section are required. Note
+that the `tag' option, above, is overwritten in this case.
+\item[abundance\_data] Filename or path to a table of OTU abundance
+  data, formatted as described in section
+  \ref{abundance_data}. Required, unless `load\_example' is set.
+\item[sample\_metadata]
+  Filename or path to a table giving a subject and timepoint for each
+  sample in the abundance table, formatted as described in section
+  \ref{sample_metadata}. Required, unless `load\_example' is set.
+\item[subject\_data]
+  Filename or path to a table of data about each subject,
+  formatted as described in section
+  \ref{subject_data}. Required, unless `load\_example' is set.
+\item[jplace\_file] Filename or path to pplacer results in
+  \texttt{.jplace} format, as described in section
+  \ref{abundance_data}. Required if `aggregate\_on\_phylogeny' is set
+  to True in section `preprocessing', or `taxonomoy\_source' is
+  `pplacer` or `hybrid', unless `load\_example' is set.
+\item[sequence\_key]
+  Filename or path to a FASTA file to be used to rename
+  the OTUs listed in the abudance table, in the case where
+  the name of each OTU is simply a sequence, as in some DADA2 output;
+  see \ref{sequence_key}. Optional.
+\item[outcome\_variable] String, specifying which of the columns in
+  the subject data table encodes the outcome that MITRE should try to
+  predict. Subjects for whom this data is not available will be
+  dropped from the calculation.  Required, unless `load\_example' is
+  set.
+\item[outcome\_positive\_value] The value of the outcome variable that
+  corresponds to a positive outcome. All other (non-missing) values
+  will be considered a negative outcome. Due to a minor limitation of
+  MITRE's data parsing system, \textit{if the outcome variable is
+    given as `true'/`false', `True'/`False', etc., in the subject data
+    table, the positive value must be given as `1' or `0' in the
+    configuration file.}  Other strings or numerical values should
+  work as expected. Required, unless `load\_example' is set.
+  
+\item[taxonomy\_source] String specifying how taxonomic annotations
+  for each variable (i.e., subtree of the overall phylogeny) should be
+  generated. Valid options are `table', `pplacer', and `hybrid' (see
+  the supplement to the MITRE manuscript for a full explanation of
+  these options; in short, `table' labels OTUs from a table and higher
+  clades based on the OTUs they contain, `pplacer' labels all
+  variables based on the pplacer results, and `hybrid' labels
+  variables based on pplacer results except where a species-level
+  placement is given in a table.) If this option is not present, no
+  such annotation will be done. If given, note that the table of
+  annotations will be written to
+  \texttt{[tag]\_variable\_annotations.txt} at the conclusion of the
+  preprocessing step, unless phylogenetic aggregation is not
+  performed.
+    
+\item[pplacer\_taxa\_table] Filename or path to a table from the
+  pplacer reference package, formatted as described in section
+  \ref{pplacer_taxa_table}. Required if `taxonomy\_source' is
+  `pplacer' or `hybrid'; otherwise ignored.
+\item[pplacer\_seq\_info] Filename or path to a table from the pplacer
+  reference package, formatted as described in section
+  \ref{pplacer_seq_info}. Required if `taxonomy\_source' is `pplacer'
+  or `hybrid'; otherwise ignored.
+
+\item[additional\_subject\_covariates] String or comma-separated list
+  of strings specifying additional variables (columns in the subject
+  data table) to be included in the regression calculation. See
+  ``Incorporating additional covariates'', section 1.6 of the
+  supplementary note to the MITRE manuscript for full details. These
+  variables should be categorical. For quantitative covariates, see
+  below. Subjects where data for any of these variables
+  are missing will be dropped from the calculation. Optional.
+\item[additional\_covariate\_default\_states] String or
+  comma-separated list of strings specifying, in the appropriate
+  order, the values of the additional covariates to be treated as the
+  default state. For each such covariate, the model will incorporate a
+  change in the odds of the outcome associated with every other value
+  of the covariate, but not this value. Required if
+  `additional\_subject\_covariates' is specified.
+\item[additional\_subject\_continuous\_covariates] String or
+  comma-separated list of strings specifying additional variables
+  (columns in the subject data table) to be included in the regression
+  calculation as quantitative covariates. The name is somewhat
+  misleading, as integer-valued variables are fine here. See
+  ``Incorporating additional covariates'', section 1.6 of the
+  supplementary note to the MITRE manuscript for full
+  details. Subjects where data for any of these variables are missing
+  will be dropped from the calculation. Optional.
+\end{description}
+
+\section{Preprocessing}\label{preprocessing}
+See section 2.1 of the MITRE supplementary note for a detailed
+discussion of the data preprocessing and filtering procedure
+controlled by the `preprocessing' section of the configuration
+file. Note that the ordering of the options in the configuration file
+does not matter.  Steps will be carried out in the order the
+corresponding options are presented below, skipping any for which the
+corresponding options are not given in the configuration file. Except
+where specified, any of these options may be omitted.
+
+\begin{description}
+\item[min\_overall\_abundance] Numeric value ($N_\text{counts,OTU}$ in
+  the notation of section 2.1). If this is specified, all OTUs with
+  lower total abundance data than this value, summed across all
+  samples, are dropped. (Abundance data is assumed to be measured in
+  16S read counts at this stage, but this is not enforced.)
+\item[min\_sample\_reads] Numeric value ($N_\text{counts,sample}$ in
+  the notation of section 2.1). If this is specified, all samples
+  where the total abundance data across all (remaining) OTUs sum to
+  less than this value are dropped. (Abundance data is assumed to be
+  measured in 16S read counts at this stage, but this is not
+  enforced.)
+\item[trim\_start] Numeric value ($t_i$ in the notation of section
+  2.1). The time to consider as the beginning of the study. (By
+  default, this will be the timepoint of the earliest (remaining)
+  sample.) Samples before this time will be dropped. If this is given,
+  `trim\_stop' must be given also.
+\item[trim\_stop] Numeric value ($t_f$ in the notation of section
+  2.1). The time to consider as the end of the study. (By
+  default, this will be the timepoint of the latest (remaining)
+  sample.) Samples after this time will be dropped.
+\item[density\_filter\_n\_samples] Numeric value ($N_s$ in the
+  notation of section 2.1). If this is given,
+  `density\_filter\_n\_intervals' and
+  `density\_filter\_n\_consecutive' must be given also. The duration
+  of the study will be divided into the specified number of time
+  intervals, and subjects from whom at least the specified number of
+  samples are available in \textit{every} time window formed from the
+  specified number of consecutive intervals are retained; samples from
+  all other subjects are dropped.
+\item[density\_filter\_n\_intervals] Integer ($N_\text{w,filter}$ in
+  the notation of section 2.1). See above.
+\item[density\_filter\_n\_consecutive] Integer ($N_c$ in the notation
+  of section 2.1). See above.
+\item[take\_relative\_abundance] Boolean. If True, abundance data will
+  be converted to relative abundances by normalizing so that the sum
+  of the data for each sample is 1.0.
+\item[aggregate\_on\_phylogeny] Boolean. If True, introduce new
+  variables corresponding to subtrees of the overall phylogeny of the
+  OTUs, inferred from \texttt{pplacer} results given in the
+  `jplace\_file' option above, as discussed in section 2.2 of the
+  supplement. The data for each new variable will be the sum of the data
+  for the OTUs contained in the subtree.
+\item[log\_transform] Boolean. If True, take the natural log of all
+  abundance data. Values less than $10^{-10}$ will be replaced by
+  $10^{-6}$ before taking the log.
+\item[temporal\_abundance\_threshold] Numeric value ($a$ in the
+  notation of section 2.1).  If this option is given,
+  `temporal\_abundance\_consecutive\_samples' and
+  `temporal\_abundance\_n\_subjects' must be also. Variables which
+  exceed the abundance threshold in at least the specified number of
+  consecutive samples in the data from each of at least the specified
+  number of subjects will be kept; others will be dropped. If the data
+  has been log-transformed, this should be specified on a log scale.
+\item[temporal\_abundance\_consecutive\_samples] Numeric value ($N_a$
+  in the notation of section 2.1). See above.
+\item[temporal\_abundance\_n\_subjects] Numeric value ($N_i$ in the
+  notation of section 2.1). See above.
+\item[discard\_surplus\_internal\_nodes] Boolean. If true,
+  variables corresponding to subtrees rooted at internal nodes which
+  have only one (remaining) child node after the filtration steps
+  have been applied will be dropped from the analysis.
+\item[pickle\_dataset] Boolean. If true, the MITRE datastructure
+  corresponding to the processed and filtered dataset will be
+  serialized to \texttt{[tag]\_dataset\_object.pickle} at the
+  conclusion of the preprocessing step.
+\end{description}
+
+\section{Model}\label{model}
+\subsection{Required values}
+Required or conditionally required options section `model' are:
+\begin{description}
+\item[load\_data\_from\_pickle] String giving the location of a
+  \texttt{dataset\_object.pickle} file from a previous preprocessing
+  step. Must be given if no `preprocessing' section in this file. If
+  given, a model for that dataset will be built; otherwise, a model
+  will be built for the result of the `preprocessing' step specified
+  in this file.
+\item[n\_intervals] Integer, required. ($N_w$ in the notation of
+  chapter 1 of the MITRE supplementary note.) The study duration will
+  be divided into this many intervals and rules will apply to time
+  windows formed one or more consecutive such intervals.
+\item[t\_min] Numeric value, required. ($W_\text{min}$ in the notation of
+  chapter 1 of the MITRE supplementary note.) Rules may apply only
+  to time windows this long or longer.
+\item[t\_max] Numeric value, required. ($W_\text{max}$ in the notation of
+  chapter 1 of the MITRE supplementary note.) Rules may apply only
+  to time windows this long or shorter.
+\end{description}
+
+\subsection{Saving the model object}
+An optional setting allows saving the model for reuse:
+\begin{description}
+\item[pickle\_model] Boolean. If true, the MITRE datastructure
+  representing the model will be serialized to
+  \texttt{[tag]\_model\_object.pickle} at the conclusion of the model
+  setup step.
+\end{description}
+
+\subsection{Advanced settings}
+The following advanced options, all numeric, are not required. See the
+indicated sections of the MITRE
+supplementary note for explanations of their significance.
+\begin{description}
+\item[prior\_coefficient\_variance] $\sigma_b^2$ in the notation of
+  section 1.3. (default 100.0)
+\item[hyperparameter\_alpha\_m] $\alpha_m$ in the notation of section 1.4 (default 0.5)
+\item[hyperparameter\_beta\_m] $\beta_m$ in the notation of section 1.4 (default 2.0)
+\item[hyperparameter\_alpha\_primitives] $\alpha_n$ in the notation of section 1.4 (default 2.0)
+\item[hyperparameter\_beta\_primitives] $\beta_n$ in the notation of section 1.4 (default 4.0)
+\item[hyperparameter\_a\_empty] $a_\Theta$ in the notation of section
+  1.4.1 (default 0.5)
+\item[hyperparameter\_b\_empty] $b_\Theta$ in the notation of section
+  1.4.1 (default 0.5)
+\item[max\_thresholds] $N_\theta$ in the notation of section 1.2.4
+  (default, no maximum)
+\item[max\_rules] $m_\text{max}$ in the notation of section 1.4 (default 10)
+\item[max\_primitives] $n_\text{max}$ in the notation of section 1.4 (default 10)
+\item[window\_concentration\_typical]
+  $c_{w,\text{typical}}=1/\lambda_w$ in the notation of section 1.4.3
+  (default 5.0)
+\item[window\_concentration\_update\_ratio] Controls the
+  standard deviation of the proposal distribution for the
+  update $\delta_w$ to $c_W$ relative to $c_{w,\text{typical}}$
+  (default 0.2); see section 1.5.4.
+\item[delta\_l\_scale\_mean] Variance of the normal
+  prior distribution of $\mu_L$ in the notation of section 1.4.3, relative
+  to $\Delta_L^2$ (default 50.0). 
+\item[delta\_l\_scale\_sigma] Upper bound on the range of allowed
+  values for $\sigma_L$ in the notation of section 1.4.3, relative to
+  $\Delta_L$ (default 25.0)
+\item[lambda\_l\_offset] Amount by which $\Lambda_L$ in the notation
+  of section 1.4.3 differs from the median of the logarithms of the
+  subtree weights $L_i$ (default 0.0).
+\end{description}
+
+\section{Sampling}\label{sampling}
+Options allowed in section `sampling' are:
+\begin{description}
+\item[load\_model\_from\_pickle] String giving the location of a
+  \texttt{model\_object.pickle} file from a previous model setup
+  step. Must be given if no `model' section in this file. If given,
+  that model will be sampled from; otherwise, the model specified by
+  the `model' section of this file will be used.
+\item[total\_samples] Total number of samples to draw. Either this or
+  `sampling\_time' must be given.
+\item[sampling\_time] Number of seconds to run the sampling process. If present,
+  overrides `total\_samples'.
+\item[pickle\_sampler] Boolean. If true, the MITRE datastructure
+  representing the sampler will be serialized to
+  \texttt{[tag]\_sampler\_object.pickle} at the conclusion of
+  sampling.
+\end{description}
+
+\section{Postprocessing}\label{postprocessing}
+The following settings, all optional, may be specified in section `postprocessing':
+\begin{description}
+  \item[load\_sampler\_from\_pickle] String giving the location of a
+    \texttt{sampler\_object.pickle} file from a previous sampling
+    step. Must be given if no `sampling' section in this file. If
+    given, generate output from the samples drawn by that sampler;
+    otherwise, from the samples drawn as specified in the `sampling'
+    section of this file.
+  \item[burnin\_fraction] Number between 0 and 1 giving the fraction of
+    samples to discard as burn-in before analysis. Defaults to 0.05. 
+  \item[quick\_summary] Boolean. If True, write the point summary,
+    the distribution of rule set lengths, and the Bayes factor in
+    favor of the empty rule set 
+    \texttt{[tag]\_quick\_summary.txt}.
+  \item[full\_summary] Boolean. If True, write the point summary,
+    the distribution of rule set lengths, the Bayes factor in
+    favor of the empty rule set, and the highest-posterior-probability
+    rule set clusters (see section 3.3 of the MITRE supplement) to 
+    \texttt{[tag]\_full\_summary.txt}.
+  \item[bayes\_factor\_table] Boolean. If True, write the 10 variables
+    and 10 detectors with the highest Bayes factors supporting their
+    inclusion in the true model, and those factors, to
+    \texttt{[tag]\_bayes\_factor\_table.txt}. See section 3.4 of the
+    MITRE supplement.
+  \item[gui\_output] Boolean. If true, prepare an interactive
+    visualization of the results as described in section 3.5 of the
+    MITRE supplement and save it to
+    \texttt{[tag]\_visualization.html}. Note, this output cannot be
+    generated if `aggregate\_on\_phylogeny' is not set.
+  \item[bayes\_factor\_samples] Integer. Draw this many samples
+    to estimate the prior distribution over the space of detectors in the
+    process of estimating Bayes factors, if the other options in this
+    section require the estimation of Bayes factors (beyond the
+    Bayes factor for the empty rule set.) Default 10000.
+  \item[mixing\_diagnostics] Boolean. If true, plot the sampled values
+    of the likelihood, prior, rule set length (total number of
+    detectors), an arbitrary subset of the auxiliary variables
+    $\omega$, and parameters $f_w$, $c_w$, $\mu_L$, and $\sigma_L$
+    (defined in the MITRE supplementary note) versus MCMC
+    iteration. Results will be saved in
+    \texttt{[tag]\_likelihood.pdf}, \texttt{[tag]\_prior.pdf}, etc.
+    
+\end{description}
+
+\section{K-fold crossvalidation}\label{crossvalidation}
+Required or conditionally required options in section `crossvalidation' are:
+\begin{description}
+\item[load\_model\_from\_pickle] String giving the location of a
+  \texttt{model\_object.pickle} file from a previous model setup
+  step. Must be given if no `model' section in this file. If given,
+  that model will be crossvalidated; otherwise, the model specified by
+  the `model' section of this file will be used.
+\item[n\_folds] Integer; how many folds of cross-validation should be
+  done.
+\item[parallel\_workers] Integer; how many parallel worker processes
+  should be launched. 
+\item[burnin\_fraction] Number between 0 and 1 giving the fraction of
+  samples to discard as burn-in before calculating accuracy metrics
+  for each fold.
+\item[total\_samples] Total number of samples to draw for each
+  fold. Either this or `sampling\_time' must be given.
+\item[sampling\_time] Number of seconds to run the sampling process
+  for each fold. If present, overrides `total\_samples'.
+\end{description}
+
+Non-mandatory options are:
+\begin{description}
+\item[write\_reports\_every\_fold] Boolean. If True, the quick summary
+  described in section \ref{postprocessing} will be written after
+  sampling concludes for every fold (\texttt{[tag]\_0\_qr.txt},
+  \texttt{[tag]\_1\_qr.txt}, etc.) Note that accuracy metrics in these
+  reports are calculated based on the \textit{training} set for the fold,
+  not the held-out test set.
+\item[write\_full\_summaries\_every\_fold] Boolean. If True, the full
+  summary described in section \ref{postprocessing} will be written
+  after sampling concludes for every fold
+  (\texttt{[tag]\_0\_full\_summary.txt},
+  \texttt{[tag]\_1\_full\_summary.txt}, etc.) Note that accuracy
+  metrics in these reports are calculated based on the
+  \textit{training} set for the fold, not the held-out test set.
+\item[pickle\_results] Boolean. If true, the true outcomes and
+  predicted probabilities of a positive outcome for each subject in
+  each test set under the point and ensemble classifiers will be
+  written (as serialized Python objects) to
+  \texttt{[tag]\_cv\_point\_results.pickle} and
+  \texttt{[tag]\_cv\_ensemble\_results.pickle} for further analysis.
+\end{description}
+At the conclusion of crossvalidation, a table of accuracy metrics for
+the point and ensemble classifiers learned in each fold, applied to
+the held-out test data for each fold, will be written to
+\texttt{[tag]\_mitre\_cv\_report.txt}.
+
+\section{Leave-one-out crossvalidation}\label{leave_one_out}
+The options for section `leave\_one\_out' are the same as those for
+section `crossvalidation', above, except that `n\_folds' is not
+required (and is ignored if given.)
+
+At the conclusion of crossvalidation, a table of accuracy metrics for
+the predictions made on the left-out subjects for each fold will be
+written to \texttt{[tag]\_mitre\_leave\_one\_out\_report.txt}.
+
+
+\section{Comparison}\label{comparison_methods}
+This section supports benchmarking the MITRE models against
+alternative methods.  See the MITRE manuscript for the details of the
+comparison methods used and an explanation of these parameters.  Options
+in section `comparison\_methods' are:
+\begin{description}
+\item[load\_data\_from\_pickle] String giving the location of a
+  \texttt{dataset\_object.pickle} file from a previous preprocessing
+  step. Must be given if no `preprocessing' section in this file. If
+  given, a model for that dataset will be built; otherwise, a model
+  will be built for the result of the `preprocessing' step specified
+  in this file.
+\item[cv\_type] String, optional. If 'leave\_one\_out', assess the performance
+  of the methods by leave-one-out crossvalidation; otherwise,
+  use k-fold crossvalidation.
+\item[n\_folds] Integer, required unless `cv\_type' is `leave\_one\_out',
+  specifying how many folds to use for k-fold crossvalidation.
+\item[n\_intervals] Integer, required. $N_\text{w,comparison}$ in the
+  notation of the MITRE manuscript.
+\item[n\_consecutive] Integer, required. $N_\text{c,comparison}$ in
+  the notation of the MITRE manuscript.
+\end{description}
+
+\section{Benchmarking}\label{benchmarking}
+If this section is present:
+\begin{enumerate}
+\item Data is loaded following the options in the `preprocessing' section
+    normally, through the step of conversion to relative abundance. 
+
+\item The first comparison-methods crossvalidation is run immediately,
+  following the options specified in the `comparison' section of the
+  configuration file as usual. (If log-transformation is specified in
+  the `preprocessing' section, this is applied to the data passed to the
+  comparison methods.) The resulting report will be labeled
+  \texttt{[tag]\_benchmark\_step3\_comparison.txt}.
+
+\item Temporal filtering options are applied to a copy of the dataset
+  and a second comparison-methods crossvalidation is run. (Again, if
+  log-transformation is specified in the `preprocessing' section, this
+  is applied to the data passed to the comparison methods.)  The
+  resulting report will be labeled
+  \texttt{[tag]\_benchmark\_step4\_comparison.txt}.
+
+\item All later actions in the `preprocessing' section are applied to
+  the dataset normally, such as aggregation on the phylogenetic tree
+  and log transformation. A third comparison-methods crossvalidation
+  is run. The resulting report will be labeled
+  \texttt{[tag]\_benchmark\_step5\_comparison.txt}.
+    
+\item The dataset is used for MITRE crossvalidation, following the
+  options specified in the `model' and `crossvalidation' or
+  `leave\_one\_out' section of the configuration file as usual.
+\end{enumerate}
+
+The comparison method F1 scores reported in the manuscript are those
+from \texttt{...step3\_comparison.txt} or \texttt{...step4\_comparison.txt},
+whichever are better, to provide the most favorable conditions for the
+comparison methods.
+
+One option is allowed in this section (but its use is
+not recommended, as it is likely to lead to confusion.)
+\begin{description}
+\item[load\_data\_from\_pickle] String giving the location of a
+  \texttt{dataset\_object.pickle}, \textit{preprocessed up to
+    conversion to relative abundance, but not farther.} If given, this
+  will be loaded and the first part of the preprocessing stage will be
+  skipped; options governing later steps of the preprocessing
+  operation must still be specified in this file.
+\end{description}
+
+\chapter{Example configuration file}\label{sample}
+This file is also available as \texttt{example.cfg} in the MITRE
+source distribution. It specifies that MITRE should load data from the
+dietary perturbation study of David et al (2014), reprocessed as
+described in the MITRE supplementary note, learn rules that will
+predict whether a subject ate the exclusively plant-based diet or not,
+and produce text and interactive summaries of the results.
+
+This file cannot be used exactly as is: you will need to edit the
+paths to the data files, and change the outcome and filtering
+parameters to whatever is appropriate for your own
+study. (Alternatively, if you do want to rerun this calculation, you
+can simply replace the options in the `data' section with
+\texttt{load\_example = david} to use the copies of the relevant files
+included with the MITRE distribution.)
+
+\begin{lstlisting}[language=Ini,caption=Template MITRE configuration file,numbers=none]
+# Note: comments placed on their own lines
+# may start with ';' or '#', but 
+# inline comments should start only with ';'.
+
+[description]
+tag = david_diet
+
+[data]
+abundance_data = /path/to/your_data/abundance.csv
+sequence_key = /path/to/your_data/sequence_key.fa
+sample_metadata = /path/to/your_data/sample_metadata.csv
+subject_data = /path/to/your_data/subject_data.csv
+jplace_file = /path/to/your_data/placements.jplace
+outcome_variable = diet
+outcome_positive_value = Plant
+taxonomy_source = hybrid
+pplacer_taxa_table = /path/to/your_data/taxaTable.csv 
+pplacer_seq_info = /path/to/your_data/seq_info.csv
+placement_table = /path/to/your_data/mothur_placements.csv
+
+[preprocessing]
+# Note that the order of these options in the configuration file is
+# not important. Those filters and transformations selected will be
+# applied in the following order: 
+# overall abundance filter, sample depth filter, window trimming,
+# temporal sampling density filter, relative abundance
+# transformation, phylogenetic aggregation, log transform,
+# temporal abundance filter, surplus internal node filtering.
+
+# Drop RSVs with less than a certain number of reads across
+# all samples
+min_overall_abundance = 10
+# Drop samples with less than a certain total number of reads
+min_sample_reads = 5000
+# No need to trim the time window here, -5 to 10 is okay
+# trim_start = 20
+# trim_stop = 30
+# Discard subjects with insufficiently dense temporal sampling:
+# divide the window up into n_intervals equal pieces, 
+# then require at least n_samples within every n_consecutive
+# consecutive such pieces
+# We don't actually need to do this here, the sampling density
+# is good for all 20 subjects.
+# density_filter_n_samples = 1
+# density_filter_n_intervals = 12
+# density_filter_n_consecutive = 2
+# Select which transformations should be applied to the data. 
+take_relative_abundance = True
+aggregate_on_phylogeny = True
+log_transform = False
+# Temporal abundance filtration: keep only those taxa which 
+# exceed a threshold abundance in multiple consecutive observations
+# at least once in a minimum number of subjects. Note that the 
+# threshold should be on a log scale if the log transform has been 
+# performed.
+temporal_abundance_threshold = 0.001
+temporal_abundance_consecutive_samples = 2
+temporal_abundance_n_subjects = 4
+# Discard taxa representing nodes in the phylogenetic tree not
+# required to maintain the topological relationships among
+# the other nodes of the tree still included in the model.
+discard_surplus_internal_nodes = True
+# Save this dataset as a pickle file?
+pickle_dataset = True
+
+[model]
+# Divide the experiment into this many equal segments and use them
+# as the atomic time windows
+n_intervals = 10
+# Allow rules to apply only to time windows longer than t_min
+t_min = 1.0
+# Allow rules to apply only to time windows shorter than t_max
+t_max = 7.0
+pickle_model = True
+
+[sampling] 
+total_samples = 50000
+
+[postprocessing]
+quick_summary = True
+full_summary = True
+gui_output = True
+burnin_fraction = 0.1
+\end{lstlisting}
+
+
+\end{document}

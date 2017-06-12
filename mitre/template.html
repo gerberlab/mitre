@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+ .chart div {
+     font: 10px sans-serif;
+     background-color: steelblue;
+     text-align: right;
+     padding: 3px;
+     margin: 1px;
+     color: white;
+ }
+
+ .flexbox {
+     display: -ms-flex;
+     display: -webkit-flex;
+     display: flex;
+     width: 100%;
+ }
+
+ .left {
+     /* background: #a0ffa0; */
+     min-width: 650px;
+     flex-grow: 0;
+ }
+ 
+ .right {
+     /* background: #a0a0ff; */
+     flex-grow: 1;
+ }
+
+ .axislabel {
+     font-family: sans-serif;
+ }
+ 
+ .thresholdline {
+     stroke-width: 10px;
+     stroke: red;
+     fill-opacity: 0;
+ }
+
+ .thresholdslope {
+     stroke-dasharray: 10,5;
+ }
+
+
+ .medianline {
+     stroke-width: 10px;
+     fill-opacity: 0;
+     stroke: #000000;
+     fill: #000000;
+ }
+
+ .medianslope {
+     stroke-dasharray: 10,5;
+ }
+
+ .datapoint {
+    /* Applying the radius to the markers for each datapoint separately causes some 
+       problems with Adobe Illustrator's SVG import? */
+    /*
+       r: 5px; 
+    */
+ }
+
+ .rule_window_rectangle {
+     fill: #cccccc;
+ }
+
+ /* Original colors: class1 steelblue, class0 green*/
+
+ .class1 {
+     stroke: #1b9e77;
+     fill: #1b9e77;
+ }
+ .class0 {
+     stroke: #7570b3;
+     fill: #7570b3;
+ }
+ .dataline {
+     stroke-width: 1.5px;
+     stroke-linejoin: round;
+     stroke-linecap: round;
+     fill: none;
+ }
+
+      /* disable text selection */
+      svg *::selection {
+         background : transparent;
+      }
+     
+      svg *::-moz-selection {
+         background:transparent;
+      } 
+     
+      svg *::-webkit-selection {
+         background:transparent;
+      }
+      rect.selection {
+        stroke          : #333;
+        stroke-dasharray: 4px;
+        stroke-opacity  : 0.5;
+        fill            : transparent;
+      }
+
+      rect.cell-border {
+        stroke: #eee;
+        stroke-width:0.3px;   
+      }
+
+      rect.cell-selected {
+        stroke: rgb(51,102,153);
+        stroke-width:0.5px;   
+      }
+
+      rect.cell-hover {
+        stroke: #F00;
+        stroke-width:0.3px;   
+      }
+
+      text.mono {
+        font-size: 9pt;
+        font-family: Consolas, courier;
+        fill: #aaa;
+      }
+
+      text.text-selected {
+        fill: #000;
+      }
+
+      text.text-highlight {
+        fill: #c00;
+      }
+      text.text-hover {
+        fill: #00C;
+      }
+
+ line.node-stem {
+     stroke: #555;
+     stroke-width:2
+ }
+
+ line.node-crossbar {
+     stroke: #555;
+     stroke-width:2
+}
+      #tooltip {
+        position: absolute;
+        width: 200px;
+        height: auto;
+        padding: 10px;
+        background-color: white;
+        -webkit-border-radius: 10px;
+        -moz-border-radius: 10px;
+        border-radius: 10px;
+        -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+        -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+        box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+        pointer-events: none;
+      }
+
+      #tooltip.hidden {
+        display: none;
+      }
+
+      #tooltip p {
+        margin: 0;
+        font-family: sans-serif;
+        font-size: 12px;
+        line-height: 20px;
+      }
+
+///
+
+</style>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<H2>MITRE output for: <span id="model_tag">N/A</span></H2>
+Columns of the heat map represent short time windows, covering the
+duration of the experiment. Rows are OTUs, with their phylogeny shown
+at left. The color of a cell indicates the strength of the evidence
+that at least one rule covering that OTU in that time window is
+included in the "true" rule set. Click on a cell to view significant
+detectors which cover that cell.
+<div class="flexbox">
+    <div class="left">
+	<div id="chart" style='overflow:auto; width:640px; height:1200px;'></div>
+    </div>
+    <div class="right">
+	<div id="topright">
+	    <p id="desc">
+		Selected time interval: <span id="desc_time">(click to select)</span><br>
+		Selected variable: <span id="desc_variable">(click to select)</span><br>
+		Rules above significance threshold: <span id="desc_significant_primitives"></span></p>
+	</div>
+	<div id="midright">
+	</div>
+	<div id="bottomright">
+	    Display options: <span id="display_option_span"></span></p>
+	    <hr>
+	</div>
+	
+    </div>
+</div>
+
+<script>
+
+ //////////////////////////////////////////////////
+ // VARIABLE DECLARATIONS AND PRELIMINARIES
+ var otu_labels = []
+ var time_window_edges = [];
+ var grid_cells = {};
+
+ //////////////////////////////////////////////////
+ // PARAMETERS
+ // Not set in the style sheet above because of weird issues with Illustrator SVG import
+ var datapoint_radius = 5;
+ var min_value_log_scale = 0.000001
+ 
+ //////////////////////////////////////////////////
+ // SET UP HERE THE DATA PREVIOUSLY LOADED BY D3
+ // d3.tsv("d3_grid_data.tsv", function(grid_data) { 
+ // d3.text("d3_row_data.txt", function(variables_by_row_text) {
+ // d3.json("d3_variable_tree.json", function(tree) {
+ // d3.text("d3_column_labels.txt", function(column_labels_text) {
+ // d3.tsv("d3_primitive_data.tsv", function(primitive_data) {
+
+
+ // DEVELOPMENT/DEBUGGING TEST DATA
+ 
+ /* var data = {'X': [[[0,2,3],[0,5,6],[1,1,1]],[[8,8],[7,7],[4,2]]],
+  * 	     'T': [[10,11,12],[20,30]],
+  * 	     'y': [1,0],
+  * 	     'title': 'Debugging problem'}
+  * 
+  * var grid_data = [{'beta': "", 'cell_bayes_factor': "22", "row_idx": "0", "col_idx": "0", "max_bayes_factor": "",'primitives': "0,1"},
+  * 		  {'beta': "", 'cell_bayes_factor': "2", "row_idx": "0", "col_idx": "1", "max_bayes_factor": "",'primitives': "0,1"},
+  * 		  {'beta': "", 'cell_bayes_factor': "2", "row_idx": "1", "col_idx": "0", "max_bayes_factor": "",'primitives': "2,3"},
+  * 		  {'beta': "", 'cell_bayes_factor': "22", "row_idx": "1", "col_idx": "1", "max_bayes_factor": "",'primitives': "2,3"}]
+  * var variables_by_row = [0,1];
+  * var tree = {'sq1': {'crossbar_length': 0, 'distance': 0.1, 'variable_index': 0, 'parent': 'v4', 'name': 'sq1', 'x': 1.1, 'y':0, 'annotation':'test annot sq1'},
+  * 	     'sq4': {'crossbar_length': 0, 'distance': 0.5, 'variable_index': 1, 'parent': 'v4', 'name': 'sq4', 'x': 1.5, 'y':1, 'annotation':'test annot sq4'},
+  * 	     'v4': {'crossbar_length': 1, 'distance': 1.0, 'variable_index': 2, 'parent': 'nan', 'name': 'v4', 'x': 1.0, 'y':0.5, 'annotation':'test annot v4'}};
+  * var time_window_edges = [0,5,10,15,20,25,30];
+  * var primitive_data = [{'bayes_factor': 10, 'index': 0, 'max_col': 1, 'min_col': 0, 'min_row': 0, 'max_row': 0, 'png': "2.svg", 'text': "ignore for now", 'variable': 1, 'window_start': 10.0, 'window_end': 20.0, 'type': 'slope', 'direction': 'above', threshold: 0.1, 'negative_outcome_median': 0.05, 'positive_outcome_median': 0.15, 'beta_median':-9.6, 'beta_ci_low':-17.6, 'beta_ci_high':-4.6},
+  * 		       {'bayes_factor': 19, 'index': 1, 'max_col': 1, 'min_col': 0, 'min_row': 0, 'max_row': 0, 'png': "1.svg", 'text': "ignore for now",'variable': 1, 'window_start': 10.0, 'window_end': 20.0, 'type': 'average', 'direction': 'above', threshold: 0.1, 'negative_outcome_median': 0.05, 'positive_outcome_median': 0.15, 'beta_median':9.6, 'beta_ci_low':3.6, 'beta_ci_high':14.6},
+  * 		       {'bayes_factor': 38, 'index': 2, 'max_col': 1, 'min_col': 0, 'min_row': 1, 'max_row': 1, 'png': "0.svg", 'text': "ignore for now",'variable': 1, 'window_start': 10.0, 'window_end': 20.0, 'type': 'slope', 'direction': 'above', threshold: 0.00000225256262626, 'negative_outcome_median': -0.5, 'positive_outcome_median': 0.5, 'beta_median':-9.6, 'beta_ci_low':-17.6, 'beta_ci_high':4.6},
+  * 		       {'bayes_factor': 5, 'index': 3, 'max_col': 1, 'min_col': 0, 'min_row': 1, 'max_row': 1, 'png': "3.svg", 'text': "ignore for now",'variable': 2, 'window_start': 10.0, 'window_end': 20.0, 'type': 'slope', 'direction': 'above', threshold: -2, 'negative_outcome_median': -4, 'positive_outcome_median': 0.0, 'beta_median':9.6, 'beta_ci_low':-1.6, 'beta_ci_high':14.6}];*/
+ 
+ 
+// PLACEHOLDERS FOR STRING REPLACEMENT
+var data = ###dataset_placeholder###
+var grid_data = ###grid_data_placeholder###
+var variables_by_row = ###row_data_placeholder###
+var tree = ###tree_placeholder###
+var time_window_edges = ###time_window_edges_placeholder### 
+var primitive_data = ###primitive_data_placeholder###
+ 
+ // Later code expects the window for each primitive to be provided as an array,
+ // but it's easier to produce JSON from a pandas dataframe in which the window
+ // is flattened, load that, and then add the window in the format we want it, here.
+ for (var i in primitive_data){
+     primitive_data[i].window = [primitive_data[i].window_start, primitive_data[i].window_end]
+ }
+
+ console.log(data)
+ console.log(grid_data)
+ console.log(variables_by_row)
+ console.log(tree)
+ console.log(time_window_edges)
+ console.log(primitive_data)
+ 
+ // next step: write files with corresponding JSON strings
+ // then: insert them here, and make JSON.parse() calls as necessary. 
+ 
+ ////////////////////////////////////////
+ // TITLE
+ d3.select("#model_tag").text(data.title)
+ 
+ ////////////////////////////////////////
+ // HEAT MAP GEOMETRY
+ var margin = { top: 50, right: 10, bottom: 50, left: 10 },
+     cellSize=12,
+     cellWidth=2.0*cellSize,
+     col_number=time_window_edges.length - 1,
+     row_number=variables_by_row.length,
+     width = cellWidth*col_number, // - margin.left - margin.right,
+     height = cellSize*row_number , // - margin.top - margin.bottom,
+     legendElementWidth = cellSize*2.5;
+ 
+ var left_offset = 200; // slide whole thing right to fit the tree
+
+ //////////////////////////////////////////////////
+ // SET UP THE SELECT BOX USED TO CHOOSE DISPLAY OPTIONS
+ var display_select_box = d3.select('#display_option_span')
+			    .append('select')
+			    .on('change',handle_select_box_change);
+ var display_options = ['Dynamics (linear scale)', 'Dynamics (log scale)', 'Show subtree corresponding to variable']
+ display_select_box.selectAll('option').data(display_options).enter()
+		   .append('option').text(function (d) {return d});
+		    
+ 
+ //////////////////////////////////////////////////
+ // SET UP THE SELECT BOX USED TO CHOOSE PRIMITIVES TO DISPLAY
+ var right_select_box = d3.select('#desc_significant_primitives')
+			  .append('select')
+			  .on('change',handle_select_box_change);
+ function update_selectbox_with_primitives (primitives) {
+     var sorted_primitives = primitives.slice()
+     sorted_primitives.sort(
+	     function(a,b) {
+		 return b.bayes_factor - a.bayes_factor;
+	     }
+     )
+     right_select_box.selectAll("*").remove()
+     var options = right_select_box
+	 .selectAll('option')
+	 .data(sorted_primitives).enter()
+	 .append('option')
+	 .text(function (d) {return 'Bayes factor ' + d.bayes_factor.toFixed(2) + ': ' + d.text; });
+ }
+
+ function label_coefficient(beta){
+     var tag;
+     if ( beta <= 0) {
+	 tag = "decrease by factor of "
+     } else {
+	 tag = "increase by factor of "
+     }
+     return tag + Math.exp(Math.abs(beta)).toPrecision(3)
+ }
+ 
+ function handle_select_box_change(){
+     d3.select('#bottomright').selectAll("img").remove()
+     d3.select('#bottomright').selectAll("svg").remove()
+     d3.select('#midright').selectAll("p").remove()
+     d3.select('#extentbox').remove()
+     var display_option_index = display_select_box.property('selectedIndex');
+     var si = right_select_box.property('selectedIndex');
+     var options = right_select_box
+	 .selectAll('option');
+     // This function may be triggered when we have just reset
+     // the selectbox to have no options.
+     if (options.nodes().length > 0) {
+	 s = options.filter(function (d, i) { return i === si });
+	 // Add image to right column
+	 if (display_option_index == 0) {
+	     setup_rule_space()
+	     show_primitive_linear(s.datum())
+	 } else if (display_option_index == 1) {
+	     setup_rule_space()
+	     show_primitive_log(s.datum())
+	 } else {
+	     show_subtree(s.datum())
+	 }
+	 // Add descriptive text to right column
+	 var primitive = s.datum(),
+	     explanation = ('"If, between time ' + 
+			    primitive.window[0] +
+			    " and time " +
+			    primitive.window[1] +
+			    ", the " +
+			    primitive.type +
+			    " of variable " +
+			    variable_index_to_name[primitive.variable] +
+			    " is " +
+			    primitive.direction +
+			    " " + d3.format('.3g')(primitive.threshold) +
+			    '..."')
+	 d3.select('#midright')
+	   .append("p")
+	   .text("Rule: " + explanation)
+	 d3.select('#midright')
+	   .append("p")
+	   .text("Median effect of rules containing this detector on odds of positive outcome: " +
+		 label_coefficient(primitive.beta_median) +
+		 " (2.5-97.5 percentile range: " +
+		 label_coefficient(primitive.beta_ci_low) +
+		 " to " +
+		 label_coefficient(primitive.beta_ci_high) +
+		 ")")
+	 d3.select('#midright')
+	   .append("p")
+	   .text("Applies to variable " + variable_index_to_name[primitive.variable] +": " + tree[variable_index_to_name[primitive.variable]].annotation) 
+	 d3.select('#midright')
+	   .append("p")
+	   .text("Bayes factor:" + s.datum().bayes_factor.toFixed(2))
+	 
+	 // Highlight the region of the heatmap covered by this primitive
+	 // Note the max/min rows and columns are inclusive
+	 var row_height = s.datum().max_row - s.datum().min_row + 1;
+	 var col_width = s.datum().max_col - s.datum().min_col + 1;
+	 
+	 
+	 d3.select('#heatmapgrid')
+	   .append("g")
+	   .attr("id", 'extentbox')
+	   .append("rect")
+	   .attr("x", left_offset + s.datum().min_col*cellWidth)
+	   .attr("y", (s.datum().min_row + 1)*cellSize)
+	 //           .attr("class", function(d){return "cell cell-border cr"+(d.row_idx-1)+" cc"+(d.col_idx-1);})
+	   .attr("width", cellWidth*col_width)
+	   .attr("height", cellSize*row_height)
+	   .attr("fill-opacity", 0.3)
+	   .style("fill", "#ff0000")
+     }
+ }
+
+ //////////////////////////////////////////////
+ // Set up the space for showing individual rules, and code to support that.
+
+ // Lazily make these global variables...
+ var right_svg, right_svg2, g, g2, right_margin, right_width, right_height, x_scale, y_scale;
+
+ function setup_rule_space() {
+     right_svg = d3.select("#bottomright").append("svg").attr("width",520).attr("height",500).attr("id",'rulesvg'),
+     right_margin = {top: 20, right: 20, bottom: 40, left: 60},
+     right_width = right_svg.attr("width") - right_margin.left - right_margin.right,
+     right_height = right_svg.attr("height") - right_margin.top - right_margin.bottom,
+     g = right_svg.append("g").attr("transform", "translate(" + right_margin.left + "," + right_margin.top + ")");
+     
+     
+     right_svg2 = d3.select("#bottomright").append("svg").attr("width",520).attr("height",500).attr("id",'rulesvg'),
+     g2 = right_svg2.append("g").attr("transform", "translate(" + right_margin.left + "," + right_margin.top + ")");
+
+ // Scales
+     x_scale = d3.scaleLinear()
+		 .range([0, right_width])
+		 .domain([time_window_edges[0],time_window_edges[time_window_edges.length-1]])
+		 .nice()
+
+     g.append("g")
+      .attr("transform", "translate(0," + right_height + ")")
+      .call(d3.axisBottom(x_scale))
+
+     g2.append("g")
+      .attr("transform", "translate(0," + right_height + ")")
+      .call(d3.axisBottom(x_scale))
+ }
+ 
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+ // LOG SCALE PLOTTING METHODS
+ // Line generator
+ var line_generator_log = d3.line()
+			.x(function (d) {return x_scale(d[0])})
+			.y(function (d) {if (d[1] > min_value_log_scale) {return y_scale(d[1])} else return y_scale(min_value_log_scale)});
+
+ function show_primitive_log(primitive) {
+     y_scale = d3.scaleLog().range([right_height, 0]).domain([min_value_log_scale,1]);
+
+     y_scale.clamp(true)
+     // First draw the rectangle showing the time window, then draw
+     // the line plot for the data on top of that, then draw the critical threshold
+     // on top of it all. To draw the rectangle correctly, though, we need to
+     // first rescale the y-axis for this variable and find the top of it:
+     var ymax = scale_y_axis_for_variable_log(primitive.variable)
+     ymin = y_scale.domain()[0] 
+     // This ought not to happen, but in case:
+     if(primitive.type == 'average'){ 
+	 if(ymax < primitive.threshold) {
+	     y_scale.domain([y_scale.domain()[0],primitive.threshold]).nice()
+	     
+	 }
+	 if(ymin > primitive.threshold) {
+	     y_scale.domain([primitive.threshold,y_scale.domain()[1]]).nice()
+	 }
+	 ymax = y_scale.domain()[1]
+	 ymin = y_scale.domain()[0]
+
+     }
+
+     g.selectAll('#rule_window').remove();
+     g.selectAll('#rule_threshold').remove();
+     g.selectAll('#negative_median').remove();
+     g.selectAll('#positive_median').remove();
+     g2.selectAll('#rule_window').remove();
+     g2.selectAll('#rule_threshold').remove();
+     g2.selectAll('#negative_median').remove();
+     g2.selectAll('#positive_median').remove();
+     var window_width = x_scale(primitive.window[1]) - x_scale(primitive.window[0]);
+     var window_height = -(y_scale(ymax) - y_scale(ymin));
+     g.append("rect")
+      .attr("id","rule_window")
+      .attr("x",x_scale(primitive.window[0]))
+      .attr("y",y_scale(ymax))
+      .attr("height",window_height)
+      .attr("width",window_width)
+      .attr('class','rule_window_rectangle');
+     g2.append("rect")
+      .attr("id","rule_window")
+      .attr("x",x_scale(primitive.window[0]))
+      .attr("y",y_scale(ymax))
+      .attr("height",window_height)
+      .attr("width",window_width)
+      .attr('class','rule_window_rectangle');
+     show_variable_log(primitive.variable)
+     if(primitive.type=='average') {
+	 var threshold_coords = [[primitive.window[0], primitive.threshold],
+				 [primitive.window[1], primitive.threshold]];
+	 // Note that if we append to rule_g we'll end up in the wrong z-position
+	 g.append("path")
+	  .attr("id","rule_threshold")
+	  .datum(threshold_coords)
+	  .attr("d",line_generator_log)
+	  .attr("class","thresholdline");
+	 g2.append("path")
+	   .attr("id","rule_threshold")
+	   .datum(threshold_coords)
+	   .attr("d",line_generator_log)
+	   .attr("class","thresholdline");
+	 var negative_median_coords = [[primitive.window[0], primitive.negative_outcome_median],
+				       [primitive.window[1], primitive.negative_outcome_median]];
+	 g2.append("path")
+	  .attr("id","negative_median")
+	  .datum(negative_median_coords)
+	  .attr("d",line_generator_log)
+	  .attr("class","medianline");
+	 var positive_median_coords = [[primitive.window[0], primitive.positive_outcome_median],
+				       [primitive.window[1], primitive.positive_outcome_median]];
+	 g.append("path")
+	   .attr("id","positive_median")
+	   .datum(positive_median_coords)
+	   .attr("d",line_generator_log)
+	   .attr("class","medianline");
+
+
+     } else {
+	 ////////////////////////////////////////
+	 // Slope. Center the line at the center of the window (logarithmically speaking)
+	 // First the threshold:
+	 var halfwidth = 0.5*(primitive.window[1] - primitive.window[0]),
+	     center_y = Math.exp(Math.log(ymin) + 0.5*(Math.log(ymax)-Math.log(ymin))),
+	     slope = primitive.threshold,
+	     yleft = center_y - slope * halfwidth,
+	     yright = center_y +slope * halfwidth,
+	     xleft = primitive.window[0],
+	     xright = primitive.window[1];
+	 var center_x = 0.5*(primitive.window[0] + primitive.window[1]),
+	     upper_halfheight = 0.5*(ymax-center_y),
+	     lower_halfheight = 0.5*(center_y-ymin);
+	 // Adjust so the line won't cross outside the frame of the plot
+	 if (yleft < ymin) {
+	     xleft = center_x - (lower_halfheight/slope);
+	     yleft = ymin;
+	 }
+	 if (yright > ymax) {
+	     xright = center_x + (upper_halfheight/slope);
+	     yright = ymax;
+	 }
+	 if (yleft > ymax) {
+	     xleft = center_x + (upper_halfheight/slope);
+	     yleft = ymax;
+	 }
+	 if (yright < ymin) {
+	     xright = center_x - (lower_halfheight/slope);
+	     yright = ymin;
+	 }
+
+	 threshold_coords = [[xleft, yleft], [xright, yright]];
+	 console.log('tc')
+	 console.log(threshold_coords)
+	 
+	 var slopesteps = 25;
+	 var xrange = d3.range(slopesteps).map(
+	     function(i){
+		 return xleft + i * (xright-xleft) / (slopesteps-1);
+	     }
+	 )
+	 var yrange = d3.range(slopesteps).map(
+	     function(i){
+		 return yleft + i * (yright-yleft) / (slopesteps-1);
+	     }
+	 )
+	 var path_datum = [];
+	 for(var path_index in xrange){
+	     path_datum[path_index] = [xrange[path_index], yrange[path_index]]
+	 }
+	 console.log('pd')
+	 console.log(path_datum)
+	 g2.append("path")
+	   .attr("id","rule_threshold")
+	   .datum(path_datum)
+	   .attr("d",line_generator_log)
+	   .attr("class","thresholdline thresholdslope");
+	 g.append("path")
+	  .attr("id","rule_threshold")
+	  .datum(path_datum)
+	  .attr("d",line_generator_log)
+	  .attr("class","thresholdline thresholdslope");
+
+	 ////////////////////////////////////////
+	 // Then the negative median on g2:
+	 var halfwidth = 0.5*(primitive.window[1] - primitive.window[0]),
+	     center_y = Math.exp(Math.log(ymin) + 0.5*(Math.log(ymax)-Math.log(ymin))),
+	     slope = primitive.negative_outcome_median,
+	     yleft = center_y - slope * halfwidth,
+	     yright = center_y +slope * halfwidth,
+	     xleft = primitive.window[0],
+	     xright = primitive.window[1];
+	 var center_x = 0.5*(primitive.window[0] + primitive.window[1]),
+	     upper_halfheight = 0.5*(ymax-center_y),
+	     lower_halfheight = 0.5*(center_y-ymin);
+	 // Adjust so the line won't cross outside the frame of the plot
+	 if (yleft < ymin) {
+	     xleft = center_x - (lower_halfheight/slope);
+	     yleft = ymin;
+	 }
+	 if (yright > ymax) {
+	     xright = center_x + (upper_halfheight/slope);
+	     yright = ymax;
+	 }
+	 if (yleft > ymax) {
+	     xleft = center_x + (upper_halfheight/slope);
+	     yleft = ymax;
+	 }
+	 if (yright < ymin) {
+	     xright = center_x - (lower_halfheight/slope);
+	     yright = ymin;
+	 }
+	 median_coords = [[xleft, yleft], [xright, yright]];
+	 console.log('nmc')
+	 console.log(median_coords)
+	 
+	 var slopesteps = 25;
+	 var xrange = d3.range(slopesteps).map(
+	     function(i){
+		 return xleft + i * (xright-xleft) / (slopesteps-1);
+	     }
+	 )
+	 var yrange = d3.range(slopesteps).map(
+	     function(i){
+		 return yleft + i * (yright-yleft) / (slopesteps-1);
+	     }
+	 )
+	 var path_datum = [];
+	 for(var path_index in xrange){
+	     path_datum[path_index] = [xrange[path_index], yrange[path_index]]
+	 }
+	 console.log('pd')
+	 console.log(path_datum)
+	 g2.append("path")
+		.attr("id","negative_median")
+		.datum(path_datum)
+		.attr("d",line_generator_log)
+		.attr("class","medianline medianslope");
+	 // Then the positive median on g1:
+	 var halfwidth = 0.5*(primitive.window[1] - primitive.window[0]),
+	     center_y = Math.exp(Math.log(ymin) + 0.5*(Math.log(ymax)-Math.log(ymin))),
+	     slope = primitive.positive_outcome_median,
+	     yleft = center_y - slope * halfwidth,
+	     yright = center_y +slope * halfwidth,
+	     xleft = primitive.window[0],
+	     xright = primitive.window[1];
+	 	 var center_x = 0.5*(primitive.window[0] + primitive.window[1]),
+	     upper_halfheight = 0.5*(ymax-center_y),
+	     lower_halfheight = 0.5*(center_y-ymin);
+	 // Adjust so the line won't cross outside the frame of the plot
+	 if (yleft < ymin) {
+	     xleft = center_x - (lower_halfheight/slope);
+	     yleft = ymin;
+	 }
+	 if (yright > ymax) {
+	     xright = center_x + (upper_halfheight/slope);
+	     yright = ymax;
+	 }
+	 if (yleft > ymax) {
+	     xleft = center_x + (upper_halfheight/slope);
+	     yleft = ymax;
+	 }
+	 if (yright < ymin) {
+	     xright = center_x - (lower_halfheight/slope);
+	     yright = ymin;
+	 }
+	 median_coords = [[xleft, yleft], [xright, yright]];
+	 console.log('pmc')
+	 console.log(median_coords)
+	 
+	 var slopesteps = 25;
+	 var xrange = d3.range(slopesteps).map(
+	     function(i){
+		 return xleft + i * (xright-xleft) / (slopesteps-1);
+	     }
+	 )
+	 var yrange = d3.range(slopesteps).map(
+	     function(i){
+		 return yleft + i * (yright-yleft) / (slopesteps-1);
+	     }
+	 )
+	 var path_datum = [];
+	 for(var path_index in xrange){
+	     path_datum[path_index] = [xrange[path_index], yrange[path_index]]
+	 }
+	 console.log('pd')
+	 console.log(path_datum)
+	 g.append("path")
+		.attr("id","positive_median")
+		.datum(path_datum)
+		.attr("d",line_generator_log)
+		.attr("class","medianline medianslope");
+
+
+     }
+ }
+ 
+ function scale_y_axis_for_variable_log(variable_index) {
+     var max_observation = d3.max(data.X, function(d) {
+	 return d3.max(d[variable_index]);  
+     });
+     var min_observation = d3.min(data.X, function(d) {
+	 return d3.min(d[variable_index]);  
+     });
+     if (min_observation < min_value_log_scale) {
+	 min_observation = min_value_log_scale
+     }
+     y_scale.domain([min_observation, max_observation]).nice()
+     return y_scale.domain()[1]
+ }
+ 
+ function show_variable_log(variable_index) {
+     // Assumes the y-axis has already been scaled appropriately
+     // Obliterate the previous display
+     g.selectAll("#variable_display").remove()
+     g2.selectAll("#variable_display").remove()
+
+     var variable_g = g.append("g").attr('id','variable_display');
+     var variable_g2 = g2.append("g").attr('id','variable_display');
+
+     var variable_name = variable_index_to_name[variable_index]
+     
+     variable_g.append("text")
+	       .attr("transform", "rotate(-90)")
+	       .attr("y", 0 - right_margin.left)
+	       .attr("x",0 - right_height/2)
+	       .attr("dy", "0.75em")
+	       .style("text-anchor", "middle")
+	       .attr("class","axislabel")
+	       .text(variable_name + " in subjects with POSITIVE outcome");
+
+     variable_g.append("text")
+	       .attr("x", 0 + right_width/2)
+	       .attr("y",right_height + right_margin.bottom)
+	       .attr("dy", "-0.5em")
+	       .style("text-anchor", "middle")
+	       .attr("class","axislabel")
+	       .text("time")
+
+     variable_g2.append("text")
+	       .attr("x", 0 + right_width/2)
+	       .attr("y",right_height + right_margin.bottom)
+	       .attr("dy", "-0.5em")
+	       .style("text-anchor", "middle")
+	       .attr("class","axislabel")
+	       .text("time")
+
+     variable_g2.append("text")
+	       .attr("transform", "rotate(-90)")
+	       .attr("y", 0 - right_margin.left)
+	       .attr("x",0 - right_height/2)
+	       .attr("dy", "0.75em")
+	       .style("text-anchor", "middle")
+	       .attr("class","axislabel")
+	       .text(variable_name + " in subjects with NEGATIVE outcome");  
+     
+     //
+     // Find the maximum value for this variable and set the y scale accordingly
+     //     scale_y_axis_for_variable(variable_index)
+     variable_g.append("g")
+	       .call(d3.axisLeft(y_scale))
+     variable_g2.append("g")
+	       .call(d3.axisLeft(y_scale))
+
+     // For each subject, draw a line plot in the chart div showing the data for the specified variable
+     for(var subject_index in data.y){
+	 var observations = data.X[subject_index][variable_index];
+	 var timepoints = data.T[subject_index];
+	 var status = data.y[subject_index];
+	 console.log('status')
+	 console.log(status)
+	 
+	 // set up an array for the line data, iterate over the time points and add to it
+	 var line_coordinate_pairs = [];
+	 for(var timepoint_index in timepoints){
+	     // rescale to image coordinates
+	     line_coordinate_pairs[timepoint_index] = [timepoints[timepoint_index], observations[timepoint_index]]
+	 }
+	 // Finally draw the line
+	 var draw_g;
+	 if (status==1) {
+	     draw_g = variable_g
+	 }
+	 else {
+	     draw_g = variable_g2
+	 }
+	 draw_g.append("path")
+		.datum(line_coordinate_pairs)
+		.attr("d",line_generator_log)
+		.attr("class","dataline " + (status == 0 ? "class0" : "class1"));
+	 // Now also draw circles - there is probably a way to do this with
+	 // a generator so we don't have to apply the scales to each point separately
+	 //	 variable_g.selectAll("circle")
+	 var scatterplot_g = draw_g.append("g")
+	 scatterplot_g.selectAll("circle").data(line_coordinate_pairs)
+				       .enter()
+				       .append("circle")
+				       .attr("r", datapoint_radius)
+				       .attr("cx",function(d){return x_scale(d[0])})
+	 			       .attr("cy",function(d){return y_scale(d[1])})
+				       .attr("class","datapoint " + (status == 0 ? "class0" : "class1"));
+
+	 
+	 
+     }
+ }
+
+ // END LOG SCALE PLOTTING METHODS
+ ////////////////////////////////////////////////////////////////////////////////
+
+ ////////////////////////////////////////////////////////////////////////////////
+ // LINEAR SCALE PLOTTING METHODS
+ // Line generator
+ var line_generator_linear = d3.line()
+			    .x(function (d) {return x_scale(d[0])})
+			    .y(function (d) {return y_scale(d[1])});
+
+ function show_primitive_linear(primitive) {
+     y_scale = d3.scaleLinear().range([right_height, 0]).domain([min_value_log_scale,1]);
+
+     y_scale.clamp(true)
+     // First draw the rectangle showing the time window, then draw
+     // the line plot for the data on top of that, then draw the critical threshold
+     // on top of it all. To draw the rectangle correctly, though, we need to
+     // first rescale the y-axis for this variable and find the top of it:
+     var ymax = scale_y_axis_for_variable_linear(primitive.variable)
+     ymin = y_scale.domain()[0] 
+     // This ought not to happen, but in case:
+     if(primitive.type == 'average'){ 
+	 if(ymax < primitive.threshold) {
+	     y_scale.domain([y_scale.domain()[0],primitive.threshold]).nice()
+	     
+	 }
+	 if(ymin > primitive.threshold) {
+	     y_scale.domain([primitive.threshold,y_scale.domain()[1]]).nice()
+	 }
+	 ymax = y_scale.domain()[1]
+	 ymin = y_scale.domain()[0]
+
+     }
+
+     g.selectAll('#rule_window').remove();
+     g.selectAll('#rule_threshold').remove();
+     g.selectAll('#negative_median').remove();
+     g.selectAll('#positive_median').remove();
+     g2.selectAll('#rule_window').remove();
+     g2.selectAll('#rule_threshold').remove();
+     g2.selectAll('#negative_median').remove();
+     g2.selectAll('#positive_median').remove();
+     var window_width = x_scale(primitive.window[1]) - x_scale(primitive.window[0]);
+     var window_height = -(y_scale(ymax) - y_scale(ymin));
+     g.append("rect")
+      .attr("id","rule_window")
+      .attr("x",x_scale(primitive.window[0]))
+      .attr("y",y_scale(ymax))
+      .attr("height",window_height)
+      .attr("width",window_width)
+      .attr('class','rule_window_rectangle');
+     g2.append("rect")
+       .attr("id","rule_window")
+       .attr("x",x_scale(primitive.window[0]))
+       .attr("y",y_scale(ymax))
+       .attr("height",window_height)
+       .attr("width",window_width)
+       .attr('class','rule_window_rectangle');
+     show_variable_linear(primitive.variable)
+     if(primitive.type=='average') {
+	 var threshold_coords = [[primitive.window[0], primitive.threshold],
+				 [primitive.window[1], primitive.threshold]];
+	 // Note that if we append to rule_g we'll end up in the wrong z-position
+	 g.append("path")
+	  .attr("id","rule_threshold")
+	  .datum(threshold_coords)
+	  .attr("d",line_generator_linear)
+	  .attr("class","thresholdline");
+	 g2.append("path")
+	   .attr("id","rule_threshold")
+	   .datum(threshold_coords)
+	   .attr("d",line_generator_linear)
+	   .attr("class","thresholdline");
+	 var negative_median_coords = [[primitive.window[0], primitive.negative_outcome_median],
+				       [primitive.window[1], primitive.negative_outcome_median]];
+	 g2.append("path")
+	   .attr("id","negative_median")
+	   .datum(negative_median_coords)
+	   .attr("d",line_generator_linear)
+	   .attr("class","medianline");
+	 var positive_median_coords = [[primitive.window[0], primitive.positive_outcome_median],
+				       [primitive.window[1], primitive.positive_outcome_median]];
+	 g.append("path")
+	  .attr("id","positive_median")
+	  .datum(positive_median_coords)
+	  .attr("d",line_generator_linear)
+	  .attr("class","medianline");
+
+
+     } else {
+	 ////////////////////////////////////////
+	 // Slope. Center the line at the center of the window (logarithmically speaking)
+	 // First the threshold:
+	 var halfwidth = 0.5*(primitive.window[1] - primitive.window[0]),
+	     center_y = ymin + 0.5*(ymax-ymin),
+	     slope = primitive.threshold,
+	     yleft = center_y - slope * halfwidth,
+	     yright = center_y + slope * halfwidth,
+	     xleft = primitive.window[0],
+	     xright = primitive.window[1];
+	 var center_x = 0.5*(primitive.window[0] + primitive.window[1]),
+	     upper_halfheight = 0.5*(ymax-center_y),
+	     lower_halfheight = 0.5*(center_y-ymin);
+	 // Adjust so the line won't cross outside the frame of the plot
+	 if (yleft < ymin) {
+	     xleft = center_x - (lower_halfheight/slope);
+	     yleft = ymin;
+	 }
+	 if (yright > ymax) {
+	     xright = center_x + (upper_halfheight/slope);
+	     yright = ymax;
+	 }
+	 if (yleft > ymax) {
+	     xleft = center_x + (upper_halfheight/slope);
+	     yleft = ymax;
+	 }
+	 if (yright < ymin) {
+	     xright = center_x - (lower_halfheight/slope);
+	     yright = ymin;
+	 }
+
+	 threshold_coords = [[xleft, yleft], [xright, yright]];
+	 console.log('tc')
+	 console.log(threshold_coords)
+	 
+	 var slopesteps = 25;
+	 var xrange = d3.range(slopesteps).map(
+	     function(i){
+		 return xleft + i * (xright-xleft) / (slopesteps-1);
+	     }
+	 )
+	 var yrange = d3.range(slopesteps).map(
+	     function(i){
+		 return yleft + i * (yright-yleft) / (slopesteps-1);
+	     }
+	 )
+	 var path_datum = [];
+	 for(var path_index in xrange){
+	     path_datum[path_index] = [xrange[path_index], yrange[path_index]]
+	 }
+	 console.log('pd')
+	 console.log(path_datum)
+	 g2.append("path")
+		.attr("id","rule_threshold")
+		.datum(path_datum)
+		.attr("d",line_generator_linear)
+		.attr("class","thresholdline thresholdslope");
+	 g.append("path")
+	  .attr("id","rule_threshold")
+	  .datum(path_datum)
+	  .attr("d",line_generator_linear)
+	  .attr("class","thresholdline thresholdslope");
+
+	 ////////////////////////////////////////
+	 // Then the negative median on g2:
+	 var halfwidth = 0.5*(primitive.window[1] - primitive.window[0]),
+	     center_y = ymin + 0.5*(ymax-ymin),
+	     slope = primitive.negative_outcome_median,
+	     yleft = center_y - slope * halfwidth,
+	     yright = center_y + slope * halfwidth,
+	     xleft = primitive.window[0],
+	     xright = primitive.window[1];
+	 var center_x = 0.5*(primitive.window[0] + primitive.window[1]),
+	     upper_halfheight = 0.5*(ymax-center_y),
+	     lower_halfheight = 0.5*(center_y-ymin);
+	 // Adjust so the line won't cross outside the frame of the plot
+	 if (yleft < ymin) {
+	     xleft = center_x - (lower_halfheight/slope);
+	     yleft = ymin;
+	 }
+	 if (yright > ymax) {
+	     xright = center_x + (upper_halfheight/slope);
+	     yright = ymax;
+	 }
+	 if (yleft > ymax) {
+	     xleft = center_x + (upper_halfheight/slope);
+	     yleft = ymax;
+	 }
+	 if (yright < ymin) {
+	     xright = center_x - (lower_halfheight/slope);
+	     yright = ymin;
+	 }
+	 median_coords = [[xleft, yleft], [xright, yright]];
+	 console.log('nmc')
+	 console.log(median_coords)
+	 
+	 var slopesteps = 25;
+	 var xrange = d3.range(slopesteps).map(
+	     function(i){
+		 return xleft + i * (xright-xleft) / (slopesteps-1);
+	     }
+	 )
+	 var yrange = d3.range(slopesteps).map(
+	     function(i){
+		 return yleft + i * (yright-yleft) / (slopesteps-1);
+	     }
+	 )
+	 var path_datum = [];
+	 for(var path_index in xrange){
+	     path_datum[path_index] = [xrange[path_index], yrange[path_index]]
+	 }
+	 console.log('pd')
+	 console.log(path_datum)
+	 g2.append("path")
+		.attr("id","negative_median")
+		.datum(path_datum)
+		.attr("d",line_generator_linear)
+		.attr("class","medianline medianslope");
+	 // Then the positive median on g1:
+	 var halfwidth = 0.5*(primitive.window[1] - primitive.window[0]),
+	     center_y = (ymin + 0.5*(ymax-ymin)),
+	     slope = primitive.positive_outcome_median,
+	     yleft = center_y - slope * halfwidth,
+	     yright = center_y +slope * halfwidth,
+	     xleft = primitive.window[0],
+	     xright = primitive.window[1];
+	 var center_x = 0.5*(primitive.window[0] + primitive.window[1]),
+	     upper_halfheight = 0.5*(ymax-center_y),
+	     lower_halfheight = 0.5*(center_y-ymin);
+	 // Adjust so the line won't cross outside the frame of the plot
+	 if (yleft < ymin) {
+	     xleft = center_x - (lower_halfheight/slope);
+	     yleft = ymin;
+	 }
+	 if (yright > ymax) {
+	     xright = center_x + (upper_halfheight/slope);
+	     yright = ymax;
+	 }
+	 if (yleft > ymax) {
+	     xleft = center_x + (upper_halfheight/slope);
+	     yleft = ymax;
+	 }
+	 if (yright < ymin) {
+	     xright = center_x - (lower_halfheight/slope);
+	     yright = ymin;
+	 }
+	 median_coords = [[xleft, yleft], [xright, yright]];
+	 console.log('pmc')
+	 console.log(median_coords)
+	 
+	 var slopesteps = 25;
+	 var xrange = d3.range(slopesteps).map(
+	     function(i){
+		 return xleft + i * (xright-xleft) / (slopesteps-1);
+	     }
+	 )
+	 var yrange = d3.range(slopesteps).map(
+	     function(i){
+		 return yleft + i * (yright-yleft) / (slopesteps-1);
+	     }
+	 )
+	 var path_datum = [];
+	 for(var path_index in xrange){
+	     path_datum[path_index] = [xrange[path_index], yrange[path_index]]
+	 }
+	 console.log('pd')
+	 console.log(path_datum)
+	 g.append("path")
+		.attr("id","positive_median")
+		.datum(path_datum)
+		.attr("d",line_generator_linear)
+		.attr("class","medianline medianslope");
+
+
+     }
+ }
+ 
+ function scale_y_axis_for_variable_linear(variable_index) {
+     var max_observation = d3.max(data.X, function(d) {
+	 return d3.max(d[variable_index]);  
+     });
+     var min_observation = d3.min(data.X, function(d) {
+	 return d3.min(d[variable_index]);  
+     });
+     y_scale.domain([min_observation, max_observation]).nice()
+     return y_scale.domain()[1]
+ }
+ 
+ function show_variable_linear(variable_index) {
+     // Assumes the y-axis has already been scaled appropriately
+     // Obliterate the previous display
+     g.selectAll("#variable_display").remove()
+     g2.selectAll("#variable_display").remove()
+
+     var variable_g = g.append("g").attr('id','variable_display');
+     var variable_g2 = g2.append("g").attr('id','variable_display');
+
+     var variable_name = variable_index_to_name[variable_index]
+     
+     variable_g.append("text")
+	       .attr("transform", "rotate(-90)")
+	       .attr("y", 0 - right_margin.left)
+	       .attr("x",0 - right_height/2)
+	       .attr("dy", "0.75em")
+	       .style("text-anchor", "middle")
+	       .attr("class","axislabel")
+	       .text(variable_name + " in subjects with POSITIVE outcome");
+
+     variable_g.append("text")
+	       .attr("x", 0 + right_width/2)
+	       .attr("y",right_height + right_margin.bottom)
+	       .attr("dy", "-0.5em")
+	       .style("text-anchor", "middle")
+	       .attr("class","axislabel")
+	       .text("time")
+
+     variable_g2.append("text")
+	       .attr("x", 0 + right_width/2)
+	       .attr("y",right_height + right_margin.bottom)
+	       .attr("dy", "-0.5em")
+	       .style("text-anchor", "middle")
+	       .attr("class","axislabel")
+	       .text("time")
+
+     variable_g2.append("text")
+	       .attr("transform", "rotate(-90)")
+	       .attr("y", 0 - right_margin.left)
+	       .attr("x",0 - right_height/2)
+	       .attr("dy", "0.75em")
+	       .style("text-anchor", "middle")
+	       .attr("class","axislabel")
+	       .text(variable_name + " in subjects with NEGATIVE outcome");  
+     
+     //
+     // Find the maximum value for this variable and set the y scale accordingly
+     //     scale_y_axis_for_variable(variable_index)
+     variable_g.append("g")
+	       .call(d3.axisLeft(y_scale))
+     variable_g2.append("g")
+	       .call(d3.axisLeft(y_scale))
+
+     // For each subject, draw a line plot in the chart div showing the data for the specified variable
+     for(var subject_index in data.y){
+	 var observations = data.X[subject_index][variable_index];
+	 var timepoints = data.T[subject_index];
+	 var status = data.y[subject_index];
+	 console.log('status')
+	 console.log(status)
+	 
+	 // set up an array for the line data, iterate over the time points and add to it
+	 var line_coordinate_pairs = [];
+	 for(var timepoint_index in timepoints){
+	     // rescale to image coordinates
+	     line_coordinate_pairs[timepoint_index] = [timepoints[timepoint_index], observations[timepoint_index]]
+	 }
+	 // Finally draw the line
+	 var draw_g;
+	 if (status==1) {
+	     draw_g = variable_g
+	 }
+	 else {
+	     draw_g = variable_g2
+	 }
+	 draw_g.append("path")
+	       .datum(line_coordinate_pairs)
+	       .attr("d",line_generator_linear)
+	       .attr("class","dataline " + (status == 0 ? "class0" : "class1"));
+	 // Now also draw circles - there is probably a way to do this with
+	 // a generator so we don't have to apply the scales to each point separately
+	 //	 variable_g.selectAll("circle")
+	 var scatterplot_g = draw_g.append("g")
+	 scatterplot_g.selectAll("circle").data(line_coordinate_pairs)
+				   .enter()
+				   .append("circle")
+				   .attr("r", datapoint_radius)
+				   .attr("cx",function(d){return x_scale(d[0])})
+	 			   .attr("cy",function(d){return y_scale(d[1])})
+				   .attr("class","datapoint " + (status == 0 ? "class0" : "class1"));
+
+	 
+	 
+     }
+ }
+
+ // END LINEAR SCALE PLOTTING METHODS
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+ /////////////////////////////////////////////
+ // Tree topology and geometry.
+ // Most of this is set up at the python level, but we want to find the max x and y coordinates, and extract the immediate children, also descendants, of each node.
+ tree_keys = Object.keys(tree)
+ var max_x = 0,
+     max_y = 0;
+ var variable_index_to_name = {};
+ var variable_name_to_children = {};
+ var variable_name_to_descendants = {};
+ for (var tree_index in tree_keys) {
+     var key = tree_keys[tree_index]
+     var node = tree[key]
+     if (node.x > max_x) max_x = node.x;
+     if (node.y > max_y) max_y = node.y;
+     variable_index_to_name[node.variable_index] = node.name;
+     variable_name_to_children[key] = []
+     variable_name_to_descendants[key] = []
+ }
+
+ for (var tree_index in tree_keys) {
+     var key = tree_keys[tree_index]
+     var node = tree[key]
+     var parent = node.parent
+     if (parent != 'nan') {
+	 variable_name_to_children[parent].push(key)
+     }
+ }
+
+ // Inefficient but OK
+
+ for (var tree_index in tree_keys) {
+     var key = tree_keys[tree_index]
+     var node = tree[key]
+     var to_traverse = []
+     var children = variable_name_to_children[key]
+     var descendants = [key]
+     for (child_index in children) {
+	 to_traverse.push(children[child_index])
+     }
+     var next;
+     while (to_traverse.length > 0) {
+	 next = to_traverse.shift()
+	 descendants.push(next)
+	 children = variable_name_to_children[next]
+	 for (child_index in children) {
+	     to_traverse.push(children[child_index])
+	 }
+     }
+     variable_name_to_descendants[key] = descendants
+ }
+ console.log('vntd')
+ console.log(variable_name_to_descendants)
+
+ function show_subtree(primitive) {
+     var variable = variable_index_to_name[primitive.variable]
+     var subtree = {}
+     var subtree_max_x = 0,
+	 subtree_max_y = 0,
+	 subtree_min_y = Infinity,
+	 subtree_min_x = Infinity;
+     var descendants = variable_name_to_descendants[variable]
+     for (var descendant_index in descendants) {
+	 var descendant = descendants[descendant_index]
+	 var node = tree[descendant]
+	 subtree[descendant] = node
+	 if (node.x > subtree_max_x) subtree_max_x = node.x;
+	 if (node.x - node.distance < subtree_min_x) subtree_min_x = node.x- node.distance;
+	 if (node.y > subtree_max_y) subtree_max_y = node.y;
+	 if (node.y < subtree_min_y) subtree_min_y = node.y;
+     }
+     console.log('subtree')
+     console.log(subtree)
+     console.log(subtree_min_y)
+     console.log(subtree_max_y)
+     
+
+     // If all has gone well, min_y and max_y are integers,
+     // and the corresponding leaves all descend from this tree
+     var subtree_otu_indices = []
+     for (var i=subtree_min_y; i < subtree_max_y + 1; i++) {
+	 console.log(i)
+	 console.log(variables_by_row)
+	 console.log(variables_by_row[i])
+	 subtree_otu_indices.push(variables_by_row[i])
+     }
+     console.log('soi')
+     console.log(subtree_otu_indices)
+     var subtree_leaves_as_array = []
+     for (var i in subtree_otu_indices) {
+	 var index = subtree_otu_indices[i]
+	 var leaf_name = variable_index_to_name[index]
+	 console.log('ln')
+	 console.log(leaf_name)
+	 subtree_leaves_as_array.push(subtree[leaf_name])
+     }
+     console.log('slaa')
+     console.log(subtree_leaves_as_array)
+
+     var drawing_width = 125
+     var subtree_yscale = 25;
+     var subtree_xscale = drawing_width / (subtree_max_x-subtree_min_x);
+     var desired_height = (subtree_max_y - subtree_min_y + 1) * subtree_yscale
+     var subtree_svg = d3.select("#bottomright").append("svg").attr("width",520).attr("height",desired_height + 40).attr("id",'rulesvg'),
+	 subtree_margin = {top: 20, subtree: 20, bottom: 20, left: 20},
+	 subtree_width = subtree_svg.attr("width") - subtree_margin.left - subtree_margin.right,
+	 subtree_height = subtree_svg.attr("height") - subtree_margin.top - subtree_margin.bottom,
+	 subtree_g = subtree_svg.append("g").attr("transform", "translate(" + subtree_margin.left + "," + subtree_margin.top + ")");
+
+
+     var subtree_as_array = Object.keys(subtree).map(
+	 function(key) {return subtree[key]}
+     )
+     console.log('saa')
+     console.log(subtree_as_array)
+     console.log('sxs')
+     console.log(subtree_xscale)
+     console.log('sys')
+     console.log(subtree_yscale)
+
+     var subtree_stems = (
+	 subtree_svg.append("g").attr("class","subtree-stems")
+		    .selectAll(".branchg")
+		    .data(subtree_as_array,function(d){return d.variable_index})
+		    .enter()
+		    .append("line")
+		    .attr("class","node-stem")
+		    .attr("y1", function(d) {return subtree_yscale * ((d.y - subtree_min_y) + 1.5)})
+		    .attr("y2", function(d) {return subtree_yscale * ((d.y - subtree_min_y) + 1.5)})
+		    .attr("x1", function(d) {return subtree_xscale * (d.x - subtree_min_x)})
+		    .attr("x2", function(d) {return subtree_xscale * (d.x - subtree_min_x - d.distance)})
+     ) 
+     var subtree_crossbars = (
+	 subtree_svg.append("g").attr("class","subtree-crossbars")
+		    .selectAll(".branchg")
+		    .data(subtree_as_array,function(d){return d.variable_index})
+		    .enter()
+		    .append("line")
+		    .attr("class","node-crossbar")
+		    .attr("y1", function(d) {return subtree_yscale *
+			(d.y - subtree_min_y + 1.5 + 0.5*d.crossbar_length)})
+		    .attr("y2", function(d) {return subtree_yscale * (d.y - subtree_min_y + 1.5 - 0.5*d.crossbar_length)})
+		    .attr("x1", function(d) {return subtree_xscale * (d.x-subtree_min_x)})
+		    .attr("x2", function(d) {return subtree_xscale * (d.x-subtree_min_x)})
+     )
+
+     var subtreeLabels = (
+	 subtree_svg.append("g")
+		    .selectAll(".rowLabelg")
+		    .data(subtree_leaves_as_array)
+		    .enter()
+		    .append("text")
+		    .text(function (d) { return d.annotation })
+		    .attr("x", function (d) {return subtree_xscale * (d.x-subtree_min_x) + 5})
+		    .attr("y", function (d) {return subtree_yscale * (d.y-subtree_min_y+1.70)})
+		    .style("text-anchor", "start")
+     );
+
+
+ } 
+
+
+ 
+ 
+ /////////////////////////////////////////////
+ // Process data for each variable = each row
+ // (note that 'otu_labels' is a misleading name, as we show
+ // data at the level of variables, which need not be OTUs.)
+ var otu_labels = []
+ for (i in variables_by_row) {
+     otu_labels[i] = variable_index_to_name[variables_by_row[i]]
+ }
+     
+ /////////////////////////////////////////////
+ // Convert primitive data to numerical type.
+ // There should be an easier way to do this (in the d3 loading call?)
+ // Not everything in this file has numerical type, though.
+ var primitive_numerical_attributes = ['index',
+				       'bayes_factor',
+				       'min_row',
+				       'max_row',
+				       'min_col',
+				       'max_col'];
+ // Not sure how necessary the next step is...
+ for (i in primitive_data) {
+     for (j in primitive_numerical_attributes) {
+	 primitive_data[i][primitive_numerical_attributes[j]] = (
+	     Number(
+		 primitive_data[i][primitive_numerical_attributes[j]]
+	     )
+	 )
+     }
+ }
+ 
+ /* -----------------------------------------------------
+    CORE PLOTTING CODE
+    ----------------------------------------------------- */ 
+
+ var colorScale = d3.scaleSequential(d3.interpolateOranges)
+		    .domain([0, d3.max(grid_data, function (d) { return Math.log(d.cell_bayes_factor)})]);
+ 
+ /////////////////////////////////////////////
+ // LEFT PANEL MAIN SVG OBJECT
+ var svg = d3.select("#chart").append("svg")
+	     .attr("width", width + margin.left + margin.right + left_offset + 500)
+	     .attr("height", height + margin.top + margin.bottom)
+	     .attr("id", 'heatmapsvg')
+	     .append("g")
+	     .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+     	     .attr("id",'heatmapgrid')
+ ;
+ 
+ 
+ /////////////////////////////////////////////
+ // ROW LABELS
+ var rowLabels = (
+     svg.append("g")
+	.selectAll(".rowLabelg")
+	.data(otu_labels)
+	.enter()
+	.append("text")
+	.text(function (d) { return d; })
+	.attr("x", 0)
+	.attr("y", function (d, i) { return (i+1) * cellSize; })
+	.style("text-anchor", "start")
+	.attr("transform", "translate(" + (margin.left + Number(left_offset) + Number(width)) + "," + cellSize*0.8 + ")")
+	.attr("class", function (d,i) { return "rowLabel mono r"+i;} ) 
+	.on("mouseover", function(d) {d3.select(this).classed("text-hover",true);})
+	.on("mouseout" , function(d) {d3.select(this).classed("text-hover",false);})
+ );
+ 
+ /////////////////////////////////////////////
+ // COLUMN LABELS
+ var colLabels = (
+     svg.append("g")
+	.selectAll(".colLabelg")
+	.data(time_window_edges)
+	.enter()
+	.append("text")
+	.text(function (d) { return d; })
+	.attr("x", 0)
+	.attr("y", function (d, i) { return (i) * cellWidth; })
+	.style("text-anchor", "left")
+	.attr("transform", "translate("+(left_offset+0.2*cellWidth) + "," + (-0.0) + ") rotate (-90)")
+	.attr("class",  function (d,i) { return "colLabel mono c"+i;} )
+	.on("mouseover", function(d) {d3.select(this).classed("text-hover",true);})
+	.on("mouseout" , function(d) {d3.select(this).classed("text-hover",false);})
+ );
+ 
+ /////////////////////////////////////////////
+ // HEAT MAP
+ var heatMap = (
+     svg.append("g").attr("class","g3")
+        .selectAll(".cellg")
+        .data(grid_data,function(d){return d.row_idx+":"+d.col_idx;})
+        .enter()
+        .append("rect")
+        .attr("x", function(d) { return left_offset + (Number(d.col_idx))* cellWidth; })
+        .attr("y", function(d) { return (Number(d.row_idx)+1) * cellSize; })
+        .attr("class", function(d){return "cell cell-border cr"+(d.row_idx-1)+" cc"+(d.col_idx-1);})
+        .attr("width", cellWidth)
+        .attr("height", cellSize)
+        .style("fill", function(d) { return colorScale(Math.log(d.cell_bayes_factor)); })
+	.on("click", function (d) {
+	    // Update the grid cell info box in upper right
+	    // First the selectbox.
+	    var relevant_primitives = []
+	    if (d.primitives.length > 0) {
+		var primitive_indices = d.primitives.split(',')
+		for (i in primitive_indices) {
+		    relevant_primitives[i] = primitive_data[Number(primitive_indices[i])]
+		}
+	    }
+	    var otu_name = otu_labels[d.row_idx]
+	    var otu_annot =  tree[otu_name].annotation
+	    d3.select('#desc_variable').text(
+		otu_name + " (" + otu_annot + ")"
+	    )
+	    d3.select('#desc_time').text(
+		time_window_edges[d.col_idx] + '/' + time_window_edges[Number(d.col_idx) + 1]
+	    )
+	    update_selectbox_with_primitives(relevant_primitives)
+	    handle_select_box_change()
+	})
+     
+     // .on("mouseover", function(d){
+     //        //highlight text
+     //        d3.select(this).classed("cell-hover",true);
+     //        d3.selectAll(".rowLabel").classed("text-highlight",function(r,ri){ return ri==(d.row_idx-1);});
+     //        d3.selectAll(".colLabel").classed("text-highlight",function(c,ci){ return ci==(d.col_idx-1);});
+     
+     //        //Update the tooltip position and value
+     //        d3.select("#tooltip")
+     //          .style("left", (d3.event.pageX+10) + "px")
+     //          .style("top", (d3.event.pageY-10) + "px")
+     //          .select("#value")
+     //          .text("labels:"+[d.row-1]+","+colLabel[d.col-1]+"\ndata:"+d.value+"\nrow-col-idx:"+d.col+","+d.row+"\ncell-xy "+this.x.baseVal.value+", "+this.y.baseVal.value);  
+     //        //Show the tooltip
+     //        d3.select("#tooltip").classed("hidden", false);
+     // })
+     // .on("mouseout", function(){
+     //        d3.select(this).classed("cell-hover",false);
+     //        d3.selectAll(".rowLabel").classed("text-highlight",false);
+     //        d3.selectAll(".colLabel").classed("text-highlight",false);
+     //        d3.select("#tooltip").classed("hidden", true);
+     // })
+ );
+ 
+ // End of heatmap.
+ /////////////////////////////////////////////
+ 
+ /////////////////////////////////////////////
+ // TREE.
+ var tree_xscale = left_offset/max_x
+ var tree_yscale = cellSize
+ var tree_as_array = Object.keys(tree).map(
+     function(key) {return tree[key]}
+ )
+ var tree_stems = (
+     svg.append("g").attr("class","tree-stems")
+	.selectAll(".branchg")
+	.data(tree_as_array,function(d){return d.variable_index})
+	.enter()
+	.append("line")
+	.attr("class","node-stem")
+	.attr("y1", function(d) {return tree_yscale * (d.y + 1.5)})
+	.attr("y2", function(d) {return tree_yscale * (d.y + 1.5)})
+	.attr("x1", function(d) {return tree_xscale * d.x})
+	.attr("x2", function(d) {return tree_xscale * (d.x - d.distance)})
+ ) 
+var tree_crossbars = (
+     svg.append("g").attr("class","tree-crossbars")
+	.selectAll(".branchg")
+	.data(tree_as_array,function(d){return d.variable_index})
+	.enter()
+	.append("line")
+	.attr("class","node-crossbar")
+	.attr("y1", function(d) {return tree_yscale *
+	    (d.y + 1.5 + 0.5*d.crossbar_length)})
+	.attr("y2", function(d) {return tree_yscale * (d.y + 1.5 - 0.5*d.crossbar_length)})
+	.attr("x1", function(d) {return tree_xscale * d.x})
+	.attr("x2", function(d) {return tree_xscale * d.x})
+ )
+ 
+</script>

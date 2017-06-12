@@ -1,0 +1,16 @@
+Example data in this directory comes from the following four papers:
+
+Bokulich, N. A., et al., ``Antibiotics, birth mode, and diet shape
+microbiome maturation during early life'', Science
+Translational Medicine 8(343): 343ra82 (2016)
+
+David, L. A., et al., ``Diet rapidly and reproducibly alters the human
+gut microbiome'', Nature 505(7484): 559–63 (2014)
+
+DiGiulio, D. B., et al., ``Temporal and spatial variation of the human
+microbiota during pregnancy'', PNAS 112(35): 11060–5 (2015)
+
+Vatanen, T., et al., ``Variation in Microbiome LPS Immunogenicity
+Contributes to Autoimmunity in Humans'', Cell 165(4):842–853 (2016)
+
+It has been reprocessed as described in the MITRE manuscript.

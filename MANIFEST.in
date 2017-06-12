@@ -1,0 +1,5 @@
+include mitre/template.html
+include mitre/quick_test.cfg
+include README.md
+include mitre/efficient_likelihoods.c
+recursive-include mitre/example_data * 

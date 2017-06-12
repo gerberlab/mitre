@@ -1,0 +1,3 @@
+subject_data_augmented.csv adds composite fields 'any_allergy' 
+and 'dietary_allergy' to the covariates tracked in the original Karelia
+data set; they are calculated by add_any_allergy_variables.py.
