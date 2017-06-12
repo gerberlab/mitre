@@ -32,8 +32,7 @@ exception. Running
 
 should fix this if you are an administrator, but a better solution,
 which does not require administrator access, is to install your own
-Python interpreter. We recommend the [Anaconda distribution]
-(https://www.continuum.io/downloads) which installs key scientific
+Python interpreter. We recommend the [Anaconda distribution](https://www.continuum.io/downloads) which installs key scientific
 python libraries by default and provides an improved package management and
 installation system.
 
