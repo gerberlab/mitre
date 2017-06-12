@@ -22,6 +22,22 @@ To check that installation was successful, run
 
 A series of status messages should be displayed, followed by 'Test problem completed successfully.' 
 
+#### If you don't have the 'pip' command
+
+Recent versions of Python 2.7 provide pip by default, but the version
+of Python installed by default on OSX systems, for example, is an
+exception. Running 
+	 
+    $ sudo easy_install pip
+
+should fix this if you are an administrator, but a better solution,
+which does not require administrator access, is to install your own
+Python interpreter. Our recommended approach is to install anaconda or
+miniconda from https://conda.io which will also provide an improved
+package management and installation system.
+
+#### Supported platforms
+
 Only Mac and Linux systems are supported at this time.
 
 ### Quick start

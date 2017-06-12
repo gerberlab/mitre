@@ -82,9 +82,16 @@ verify that installation was succcessful, run
   A series of status messages should be displayed, followed by `Test
   problem completed successfully.'
 
-You will need Python 2.7 installed to install and run MITRE. (Note
-that recent versions of Python 2.7 provide the \texttt{pip} command by
-default.) Only Mac and Linux systems are supported at this time.
+You will need Python 2.7 installed to install and run MITRE. (Recent
+versions of Python 2.7 provide the \texttt{pip} command by default;
+the version of Python installed by default on OSX systems is an
+exception. Running \texttt{sudo easy\_install pip} should fix this,
+but a better solution, which does not require \texttt{sudo}
+privileges, is to install your own Python interpreter. This can be
+conveniently done by installing the \texttt{anaconda} or
+\texttt{miniconda} distributions from \url{https://conda.io}, which
+also provide an improved package management and installation system.)
+Only Mac and Linux systems are supported at this time.
 
 \section{Usage}
 To use MITRE, create a configuration file specifying input data, the
