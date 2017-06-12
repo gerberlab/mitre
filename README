@@ -1,0 +1,6 @@
+The Microbiome Interpretable Temporal Rule Engine
+=================================================
+
+MITRE learns predictive models of patient outcomes from microbiome
+time-series data in the form of short lists of interpretable rules:
+https://github.com/gerberlab/mitre 

@@ -41,7 +41,7 @@ classifiers= [
     
 setup(
     name='mitre',
-    version='0.9beta2',
+    version='0.9beta3',
     description='Microbiome Interpretable Temporal Rule Engine',
     long_description=readme(),
     url='http://github.com/gerberlab/mitre',
