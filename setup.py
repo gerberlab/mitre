@@ -17,7 +17,7 @@ if USE_CYTHON:
     extensions = cythonize(extensions)
 
 def readme():
-    with open('README.md') as f:
+    with open('README') as f:
         return f.read()
 
 ####
@@ -41,7 +41,7 @@ classifiers= [
     
 setup(
     name='mitre',
-    version='0.9beta4',
+    version='0.9beta5',
     description='Microbiome Interpretable Temporal Rule Engine',
     long_description=readme(),
     url='http://github.com/gerberlab/mitre',
