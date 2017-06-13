@@ -9,6 +9,8 @@ See an [example of MITRE's interactive visualization output](http://elibogart.ne
 
 ### Installation
 
+Python 2.7 and a C compiler are required to install MITRE.
+
 #### From PyPI (recommended):
      $ pip install mitre
 
@@ -149,7 +151,7 @@ For an interactive representation, open bokulich_diet_visualization.html and cli
 heat map to explore high-probability detectors. It might
 look like a noiser version of the example linked above.
 
-For more details, see the user guide (docs/manual.pdf) and the text
+For more details, see the [user's manual](docs/manual.pdf) and the text
 and supplementary note of the MITRE manuscript (reference below.)
 
 ### References
