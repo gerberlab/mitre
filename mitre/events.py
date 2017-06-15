@@ -188,7 +188,7 @@ def event_transform(config, data):
             else:
                 break
             new_ID = str(subject_ID) + '_%d' % j
-            pseudosubjects.append(new_ID,subject_ID, subject_index, j, Wj, outcome)
+            pseudosubjects.append((new_ID,subject_ID, subject_index, j, Wj, outcome))
     pseudosubjects = pd.DataFrame(pseudosubjects,
                                   columns = ('new_ID','old_ID','old_subject_index','j','Wj','y'))
 
@@ -442,7 +442,6 @@ def preprocess_stepA(config):
                 ('After removing internal nodes ' +
                  'not needed to maintain topology:')
             ) 
-    return data
 
     # 3i-prime. Write taxonomic annotations (if they exist), now
     # that all filtering has been done.
@@ -450,6 +449,8 @@ def preprocess_stepA(config):
         prefix = config.get('description','tag')
         filename = prefix + '_variable_annotations.txt'
         write_variable_table(data,filename)
+
+    return data
 
 def preprocess_stepB(config, data):
     if config.has_option('preprocessing','density_filter_n_samples'):
