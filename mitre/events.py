@@ -152,9 +152,9 @@ def event_transform(config, data):
         censoring = pd.read_csv(censoring_file, index_col=0, names=('time',))
     else:
         censoring = pd.DataFrame({'time': []})
-    for subject_id in data.subject_IDs:
+    for subject_ID in data.subject_IDs:
         if not censoring.index.contains(subject_ID):
-            censoring.loc[subject_id,'time'] = data.experiment_end + 1.0
+            censoring.loc[subject_ID,'time'] = data.experiment_end + 1.0
 
     n_disc_points = config.getint('preprocessing','event_discretization_points')
     lookback = config.getfloat('preprocessing','lookback')
@@ -183,11 +183,11 @@ def event_transform(config, data):
             )
             if n_qualifying_events:
                 outcome = True
-            elif censoring.loc[subject_id].time >= (Wj + lookahead):
+            elif censoring.loc[subject_ID].time >= (Wj + lookahead):
                 outcome = False
             else:
                 break
-            new_ID = str(subject_id) + '_%d' % j
+            new_ID = str(subject_ID) + '_%d' % j
             pseudosubjects.append(new_ID,subject_ID, subject_index, j, Wj, outcome)
     pseudosubjects = pd.DataFrame(pseudosubjects,
                                   columns = ('new_ID','old_ID','old_subject_index','j','Wj','y'))
@@ -444,6 +444,13 @@ def preprocess_stepA(config):
             ) 
     return data
 
+    # 3i-prime. Write taxonomic annotations (if they exist), now
+    # that all filtering has been done.
+    if taxonomy_source is not None:
+        prefix = config.get('description','tag')
+        filename = prefix + '_variable_annotations.txt'
+        write_variable_table(data,filename)
+
 def preprocess_stepB(config, data):
     if config.has_option('preprocessing','density_filter_n_samples'):
         subject_min_observations_per_long_window = (
@@ -477,13 +484,6 @@ def preprocess_stepB(config, data):
             with open(filename, 'w') as f:
                 pickle.dump(data,f)
             logger.info('Dataset written to %s' % filename)
-
-    # 3i. Write taxonomic annotations (if they exist), now
-    # that all filtering has been done.
-    if taxonomy_source is not None:
-        prefix = config.get('description','tag')
-        filename = prefix + '_variable_annotations.txt'
-        write_variable_table(data,filename)
 
     return data
 
