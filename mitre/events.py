@@ -229,9 +229,9 @@ def event_transform(config, data):
         for q, old_timepoint in enumerate(data.T[old_subject_index]):
             if (old_timepoint >= Wj - lookback) and (old_timepoint <= Wj):
                 timepoints.append(old_timepoint - Wj + lookback)
-                samples.append(data.X[old_subject_index][q])
-        X.append(samples)
-        T.append(timepoints)
+                samples.append(data.X[old_subject_index][:,q])
+        X.append(np.vstack(samples).T)
+        T.append(np.array(timepoints))
         logger.info('For effective subject %s, %d timepoints:' %
                     (subject_ID, len(timepoints)))
         logger.info(str(timepoints))

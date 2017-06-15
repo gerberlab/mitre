@@ -98,6 +98,15 @@ class PrimitiveRule:
         """
         (t0, t1) = self.window
         relevant_times = (t >= t0) & (t <= t1)
+        # print 'DEBUG'
+        # print t
+        # print t0
+        # print t1
+        # print type(t)
+        # print repr(t)
+        # print relevant_times
+        # print repr(relevant_times)
+        # print type(relevant_times)
         t = t[relevant_times] - self.midpoint
 #        print self.as_tuple()
         x = x[relevant_times] 
