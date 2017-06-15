@@ -226,6 +226,7 @@ def event_transform(config, data):
     effective.generate_additional_covariate_matrix()
     effective._primitive_result_cache = {}
 
+    describe_dataset(effective,'New effective dataset:')
     return effective
 
         
@@ -357,9 +358,16 @@ def preprocess_stepA(config):
         if config.getboolean('preprocessing','aggregate_on_phylogeny'):
             logger.info('Phylogenetic aggregation begins.')
             jplace_file = config.get('data', 'jplace_file') 
+            if config.has_option('data','sequence_key'):
+                sequence_file = config.get('data','sequence_key')
+                rename_placed_sequences = basic.fasta_to_dict(sequence_file)
+            else:
+                rename_placed_sequences = {}
+            
             data, _, _ = pplacer.aggregate_by_pplacer_simplified(
                 jplace_file,
-                data
+                data,
+                rename_placed_sequences=rename_placed_sequences
             )
             has_tree = True
             describe_dataset(data,'After phylogenetic aggregation:')
@@ -434,6 +442,7 @@ def preprocess_stepA(config):
                 ('After removing internal nodes ' +
                  'not needed to maintain topology:')
             ) 
+    return data
 
 def preprocess_stepB(config, data):
     if config.has_option('preprocessing','density_filter_n_samples'):
