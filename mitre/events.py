@@ -144,7 +144,7 @@ def event_transform(config, data):
     """
     effective = data.copy()
 
-    event_file = config.get('data','event_file'))
+    event_file = config.get('data','event_file')
     events = pd.read_csv(event_file, names=('subject','time'))
     
     if config.has_option('data','censoring_file'):
