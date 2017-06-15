@@ -156,6 +156,9 @@ def event_transform(config, data):
         if not censoring.index.contains(subject_ID):
             censoring.loc[subject_ID,'time'] = data.experiment_end + 1.0
 
+    logger.info('Censoring table:')
+    logger.info(str(censoring))
+
     n_disc_points = config.getint('preprocessing','event_discretization_points')
     lookback = config.getfloat('preprocessing','lookback')
     lookahead = config.getfloat('preprocessing','lookahead')
@@ -195,7 +198,10 @@ def event_transform(config, data):
                 outcome = False
                 logger.info('No event occurs and no censorship, outcome False')
             else:
-                logger.info('Censored at time %.3f, skipping' % censoring.loc[subject_ID].time)
+                logger.info('Censored at time %.3f > %.3f + %.3f, skipping' % 
+                            (censoring.loc[subject_ID].time,
+                             Wj, 
+                             lookahead))
                 break
             new_ID = str(subject_ID) + '_%d' % j
             pseudosubjects.append((new_ID,subject_ID, subject_index, j, Wj, outcome))
@@ -218,12 +224,15 @@ def event_transform(config, data):
         subject_data.loc[subject_ID] = data.subject_data.loc[old_subject_ID,:]
         timepoints = []
         samples = []
-        for q, old_timepoint in enumerate(T[old_subject_index]):
+        for q, old_timepoint in enumerate(data.T[old_subject_index]):
             if (old_timepoint >= Wj - lookback) and (old_timepoint <= Wj):
                 timepoints.append(old_timepoint - Wj + lookback)
                 samples.append(X[old_subject_index][q])
         X.append(samples)
         T.append(timepoints)
+        logger.info('For effective subject %s, %d timepoints:' %
+                    (subject_ID, len(timepoints)))
+        logger.info(str(timepoints))
     
     effective.n_subjects = n_subjects
     effective.subject_IDs = subject_IDs
