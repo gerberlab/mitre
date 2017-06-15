@@ -229,7 +229,7 @@ def event_transform(config, data):
     return effective
 
         
-def preprocess_step1(config):
+def preprocess_stepA(config):
     """ Load data, apply initial filters and convert to RA, create Dataset object, 
     transform and aggregate as needed.
 
