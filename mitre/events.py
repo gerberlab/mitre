@@ -154,7 +154,7 @@ def event_transform(config, data):
         censoring = pd.DataFrame({'time': []})
     for subject_ID in data.subject_IDs:
         if not censoring.index.contains(subject_ID):
-            censoring.loc[subject_ID,'time'] = data.experiment_end + 1.0
+            censoring.loc[subject_ID,'time'] = data.experiment_end
 
     logger.info('Censoring table:')
     logger.info(str(censoring))
@@ -187,6 +187,8 @@ def event_transform(config, data):
             # 1. An event happens in (W_j, W_j + F)
             # 2. No event happens, but the censoring time for this subject
             # is greater than or equal to W_j + F.
+            okay_events = ((this_subject_event_times > Wj) &
+                           (this_subject_event_times <= Wj + lookahead))
             n_qualifying_events = np.sum(
                 (this_subject_event_times > Wj) &
                 (this_subject_event_times <= Wj + lookahead)
@@ -198,7 +200,7 @@ def event_transform(config, data):
                 outcome = False
                 logger.info('No event occurs and no censorship, outcome False')
             else:
-                logger.info('Censored at time %.3f > %.3f + %.3f, skipping' % 
+                logger.info('Censored at time %.3f < %.3f + %.3f, skipping' % 
                             (censoring.loc[subject_ID].time,
                              Wj, 
                              lookahead))
@@ -227,7 +229,7 @@ def event_transform(config, data):
         for q, old_timepoint in enumerate(data.T[old_subject_index]):
             if (old_timepoint >= Wj - lookback) and (old_timepoint <= Wj):
                 timepoints.append(old_timepoint - Wj + lookback)
-                samples.append(X[old_subject_index][q])
+                samples.append(data.X[old_subject_index][q])
         X.append(samples)
         T.append(timepoints)
         logger.info('For effective subject %s, %d timepoints:' %
