@@ -490,7 +490,7 @@ def preprocess_step2(config, data):
             
             data, _, _ = pplacer.aggregate_by_pplacer_simplified(
                 jplace_file,
-                data
+                data,
                 rename_placed_sequences=rename_placed_sequences
             )
             has_tree = True
