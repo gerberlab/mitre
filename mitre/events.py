@@ -243,22 +243,6 @@ def preprocess_stepA(config):
     else:
         sequence_file = None
 
-    # 2. Outcome
-    outcome_variable = config.get('data', 'outcome_variable') 
-    outcome_positive_value = config.get('data', 'outcome_positive_value') 
-    # We don't know whether to expect the positive outcome value to be
-    # a string, boolean, or integer, but the data type needs to match
-    # the type in the dataframe of per-subject data, at least enough to 
-    # allow meaningful equality testing. Somewhat clumsily, we 
-    # just try to cast the string we read from the file to an int;
-    # if the true value is Boolean, specify either 1 or 0 in the 
-    # configuration file (not, e.g., 'true' or 'false').
-
-    try:
-        outcome_positive_value = int(outcome_positive_value)
-    except ValueError:
-        pass
-
     # 2a. Additional covariates. Assume that these are provided as
     # comma-separated lists. 
 
