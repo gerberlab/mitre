@@ -453,28 +453,28 @@ def preprocess_step1(config):
 
 def preprocess_stepB(config, data):
     if config.has_option('preprocessing','density_filter_n_samples'):
-    subject_min_observations_per_long_window = (
-        config.getfloat('preprocessing',
-                        'density_filter_n_samples')
-    )
-    n_intervals = config.getint(
-        'preprocessing',
-        'density_filter_n_intervals')
-    n_consecutive = config.getint(
-        'preprocessing',
-        'density_filter_n_consecutive'
-    )
-    data = filtering.filter_on_sample_density(
-        data,
-        subject_min_observations_per_long_window,
-        n_intervals,
-        n_consecutive=n_consecutive
-    )
-    describe_dataset(
-        data,
-        ('After filtering subjects with ' + 
-        'inadequately dense temporal sampling:')
-    )
+        subject_min_observations_per_long_window = (
+            config.getfloat('preprocessing',
+                            'density_filter_n_samples')
+            )
+        n_intervals = config.getint(
+            'preprocessing',
+            'density_filter_n_intervals')
+        n_consecutive = config.getint(
+            'preprocessing',
+            'density_filter_n_consecutive'
+        )
+        data = filtering.filter_on_sample_density(
+            data,
+            subject_min_observations_per_long_window,
+            n_intervals,
+            n_consecutive=n_consecutive
+        )
+        describe_dataset(
+            data,
+            ('After filtering subjects with ' + 
+             'inadequately dense temporal sampling:')
+        )
 
     prefix = config.get('description','tag')
     if config.has_option('preprocessing', 'pickle_dataset'):
@@ -491,6 +491,7 @@ def preprocess_stepB(config, data):
         prefix = config.get('description','tag')
         filename = prefix + '_variable_annotations.txt'
         write_variable_table(data,filename)
+
     return data
 
 
