@@ -8,7 +8,7 @@ up using argparse so that a sensible usage message can be displayed.
 
 import os
 import argparse
-import mitre.main
+import mitre.events
 
 def run():
     parser = argparse.ArgumentParser(
