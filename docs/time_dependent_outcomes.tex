@@ -1,0 +1,285 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{rotating}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{lmodern}
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
+
+\title{Notes on MITRE 2.0: Predicting events}
+\author{Eli Bogart}
+\date{\today}
+\begin{document}
+\maketitle
+\lstset{
+basicstyle=\small, 
+stringstyle=\ttfamily,
+language={},
+showstringspaces=false,
+frame=single,
+upquote=True,
+breaklines=True,
+breakatwhitespace=True,
+numbers=left
+} 
+%\listoffigures
+%\listoftables
+\section{Introduction}
+Recall that MITRE attempts to classify hosts into two groups, or
+equivalently, to predict a time-independent binary host status
+variable $y$, based on observations of each host's microbiome, which
+may be taken at different times for each host, but which all occur in
+a window $[0,T_\text{experiment}]$. If $y$ represents the occurence of
+some event, we can use this approach to `predict' that event in the
+ordinary sense of the word so long as the event can never occur before
+$T_\text{experiment}$, and we do not care exactly \textit{when} the
+event occurs after that point.
+
+More generally, however, we will want to predict when events will
+occur, and our outcome data will not be simply binary but, in effect,
+a set of events, the times at which they occurred, and the subjects
+for whom they occurred: $\mathbf E = \{(T_1, s_1), (T_2, s_2), \ldots,
+(T_{n_\text{events}}, S_{n_\text{events}})\}$.
+
+As an example of particular and immediate interest, we want to analyze
+the precision medicine \textit{C. difficle} recurrence study. Subjects
+who had just concluded treatment for an initial \textit{C. diff}
+infection provided stool samples at baseline (week 0) and weekly for
+up to 6 weeks thereafter, unless the infection recurred, in which case
+the recurrence was noted and sample collection stopped. We are
+interested in how each subject's microbiome composition over time
+affects their risk of recurrence.
+
+This is a survival analysis problem, standard if slightly complicated
+because of the time-dependence of the microbiome covariates. It is
+possible to imagine grafting any number of traditional methods for
+survival analysis onto the MITRE framework. We will pursue a simple
+approach of discretizing the problem-- here, by week-- and predicting
+the occurence of an event for each subject in each week conditional on
+the data in the preceding $\mathcal L$ weeks through a logistic
+regression model.
+
+\section{Notation}
+\subsection{Standard MITRE notation}\label{standard}
+
+Recall that MITRE's input (after any phylogenetic aggregation
+has been done) consists of measurements $x_{os}(t_{s1}),
+x_{os}(t_{s2}), \ldots$ of variables $o \in
+\{1,\ldots,n_\text{variables}\}$ in samples from subjects
+$s\in\{1,\ldots,n_\text{subjects}\}$ at observation timepoints
+$t_{s1},t_{s2},\ldots$, which may vary across subjects, but are
+assumed to all occur in the window $[0,T_\text{experiment}]$.  We
+denote the total number of observations for subject $s$ as $N_{s}$ and
+write $x_{osk}=x_{os}(t_{sk})$, and consider a binary outcome $y_s$
+for each host.
+
+\subsection{New notation}
+Because we will translate our actual data for the survival problem
+into an effective set of MITRE data, we introduce new notation for the
+raw, un-transformed data. Suppose we have data from $N_\zeta$ subjects
+in total, such that the observation times for subject $\zeta$ are
+$\eta_{\zeta1},\eta_{\zeta2}, \ldots$ (with $H_\text{min} <
+\eta_{\zeta q} < H_\text{max}$ for all $\zeta$ and $q$,) and let
+$\xi_{o\zeta q}$ be the measured value of variable $o$ in subject
+$\zeta$ at time $\eta_{\zeta q}$.
+
+As above, we have a set of observed events, which we write
+as ordered pairs of event times and subject indices:
+
+\[ \mathbf E = \{(H_1, z_1), (H_2, z_2), \ldots,
+(H_{n_\text{events}}, z_{n_\text{events}})\}\]
+
+In the \textit{C. diff} case, there will be at most one event
+per subject, but we can treat the more general case at no cost in
+additional complexity.
+
+Suppose also that we have for each subject $\zeta$ a censoring time
+$\kappa_\zeta$ after which the subject does not participate in the
+study (setting $\kappa_\zeta=H_\text{max}$ for subjects who
+complete the entire study.)  In the \textit{C. diff} case, the
+censoring times coincide with the recurrence times, but again, we can
+treat the more general case quite naturally.
+
+\section{Reformulating the time-dependent problem as a standard MITRE problem}
+
+\subsection{Discretization} 
+Choose $N_\mathcal W$ regularly spaced timepoints $H_\text{min} <
+\mathcal W_1 < \ldots < \mathcal W_{N_\mathcal W} < H_\text{max}$,
+with $\mathcal W_{2} = \mathcal W_1 + \delta$, $\mathcal W_{3} =
+\mathcal W_{1} + 2\delta$ for some $\delta$.  We will assume that
+$\delta = (H_\text{max} - H_\text{min})/N_\mathcal W $, with $W_1 =
+H_\text{min} + \delta$, etc., but this is not conceptually necessary.
+
+In the \text{C. diff} study, we naturally let $\mathcal W_1$ = 1 week
+after the baseline, $\mathcal W_2$ = 2 weeks after the baseline, and
+so on until $\mathcal W_5$ = 5 weeks after the baseline.\footnote{It
+  will become clear below that it doesn't matter whether we include
+  $\mathcal W_6$ at 6 weeks because we don't have any data about what
+  events occur after 6 weeks.}
+
+\subsection{Reformulation}
+
+Conceptually, what we will do is straightforward. We define a
+backwards interval $\mathcal L$ and a forward interval $\mathcal F$.
+For each subject $\zeta$, for each discretized time point $W_j$, we
+create an `effective subject' whose data are the data for subject
+$\zeta$ between time $W_j - \mathcal L$ and time $W_j$, and whose
+outcome is $y=1$ if an event occurs between time $W_j$ and time $W_j +
+\mathcal F$, and $y=0$ if no event occurs in that time period.
+
+(If no event occurs between $W_j$ and $W_j + \mathcal F$, \textit{and}
+$\kappa_\zeta < W_j + \mathcal F$, we do not create the effective
+subject: we don't know for sure that an event did \textit{not} happen
+in the relevant time period. If $\kappa_\zeta < W_j + \mathcal F$ but
+an event does occur in $(W_j, W_j + \mathcal F]$, we ignore the
+  censoring and proceed: we know that at least one event occured
+  before the subject left the study, and we don't care what else may
+  have happened after.)
+
+  The choice $\mathcal F=\delta$ is the most natural, as then any event
+  may effect the outcome of one and only one effective subject, but it is not technically required.
+
+Formally, we define an indicator function $I(\zeta,j)$ for $\zeta \in
+\{1 \ldots N_\zeta\}$, $j \in \{1 \ldots N_\mathcal W\}$, as
+\[  I(\zeta, j) = \left\{
+\begin{array}{ll} 1, & | \{ (H, z) \in \mathbf E \vert z = \zeta, W_j < H \leq W_j + \mathcal F\} | > 0, \\
+  1, & \kappa_\zeta \geq W_j + \mathcal F  \\
+  0, & \text{otherwise}
+\end{array}
+\right.
+\]
+Now let $S = \{ (\zeta, j) \vert I (\zeta,j) = 1$ and set $n_\text{subjects}=|S|$. Order the elements of
+$S$ arbitrarily (e.g., lexicographically) from $s_1$ to $s_{n_\text{subjects}}$.
+For each $i \in \{1, \ldots, n_\text{subjects}\}$:
+\begin{itemize}
+\item Let $J(i)$ be the value
+  of $j$ in $s_i$ and likewise let $Z(i)$ be the value of $\zeta$ in $s_i$.
+\item Let 
+\[  y_i = \left\{
+\begin{array}{ll} 1, & | \{ (H, z) \in \mathbf E \vert z = Z(i), W_{J(i)} < H \leq W_{J(i)} + \mathcal F\} | > 0, \\
+  0, & otherwise  \\
+\end{array}
+\right.
+\]
+\item Define
+  \[ Q = \{ q | \eta_{Z(i)q} \in [W_{J(i)} - \mathcal L, W_{J(i)}]\} \]
+  and let $n_{s_i}=|Q|$. Order the elements of $Q$ naturally from $q_1$ to
+  $q_{n_{s_i}}$. For $1<k<n_{s_i}$, let
+  \[t_{{s_i}k} = \eta_{Z(i)q_k} - (W_{J(i)} - \mathcal L)\]
+\item For $1<k<n_{s_i}$, let \[x_{o{s_i}k} = \xi_{oZ(i){q_k}}\].
+\end{itemize}
+
+By construction, we have obtained a new set of MITRE input data in the
+standard form shown in section \ref{standard}, with
+$T_\text{experiment}=\mathcal L$. When we build a population of
+detectors for this data set, a detector with time window $(a,b)$ will
+effectively test whether a condition applies from time $(\mathcal
+L-a)$ before the present to $(\mathcal L-b)$ before the present, and
+the coefficient associated with a rule will describe its effect on the
+log-odds that at least one event will occur between now and a time
+$\mathcal F$ from now.
+
+\section{Future direction: time-dependent coefficients}
+In the present formulation, we assume that the rule list $R$ and
+associated coefficients $\boldsymbol \beta$ do not themselves change
+with time: we use the same rules and coefficients to predict the
+occurence of events between $W_1$ and $W_1 + \mathcal F$ given data
+between $W_1 - \mathcal L$ and $W_1$, as we do to predict events
+between $W_{20}$ and $W_{20} + \mathcal F$ given data between $W_{20}$
+and $W_{20}-\mathcal L$. Modifying the structure of the rule list over
+time isn't clearly desirable and would require sweeping modifications
+to the formulation and possibly a new MCMC sampler. Allowing
+$\boldsymbol \beta$ to change over time is likely a better way to
+account for the possibility that the effect of particular factors may
+change over time, and this could be done with only modest effort. It
+would involve changing the process of forming the matrix $A(R)$ in
+section 1.3 of the MITRE supplementary note, as follows: rather than
+introducing one column per rule in $R$, we introduce $N_\mathcal W$
+columns, such that entry $i$ in the $\nu$-th column corresponding to a
+rule $\rho$ is 1 if the rule is true for effective subject $i$
+\textit{and} $J(i) = \nu$ and 0 otherwise. Then to each rule
+$\rho_\mu$ there would correspond $N_\mathcal W$ separate coefficients
+$\beta_{\mu 1}, \ldots, \beta_{\mu {N_\mathcal W}}$ giving the effects
+of the rule at times $W_1, \ldots, W_{N_\mathcal W}$. We can then
+enforce some model of the variation in coefficients over time by using
+an appropriate block-diagonal covariance matrix $C$ for the normal prior on
+$\boldsymbol \beta$ rather than the standard $\sigma^2_b I$:
+\[ \boldsymbol \beta \vert R \sim N(\mathbf 0, C).\]
+
+I have not implemented this method for two reasons:
+\begin{itemize}
+\item Lack of time to write and test the necessary code for generating
+  $A$ in this way, and, in particular, to audit the existing code for
+  steps that assume the covariance matrix for this prior has the
+  $\sigma^2_b I$ structure and revise them
+\item Strong belief that we do not now have, and are not likely in the
+  near future (or, e.g., at the conclusion of the \textit{C. diff}
+  study) to have, enough data that we could reasonably expect to learn
+  time-depencies of the coefficients.
+\end{itemize}
+
+\section{Implementation of time-dependent outcomes}
+
+To implement the approach above, the \texttt{events} branch of the MITRE git repository
+introduces a new command \texttt{mitre\_events} (see \texttt{events.py}). Like the normal
+\texttt{mitre} command this command parses a configuration file, preprocesses data, and sets up and samples
+from a model accordingly; its behavior differs from the standard as follows:
+\begin{itemize}
+\item The options `outcome\_variable' and `outcome\_positive\_value' are ignored.
+\item A new option `event\_file' in section `data' is required. It should
+  be a CSV table without header, the first column giving subject IDs and the second event times:
+
+\begin{lstlisting}[caption=Example events file]
+  SubjectID1,3
+  SubjectID5,2
+\end{lstlisting}
+
+\item A new option `censoring\_file' in section `data' is allowed. It
+  should be a CSV table without header, the first column giving
+  subject IDs and the second times, with at most one time per subject.
+  Subjects not listed (or all subjects, if this file is not given) are
+  assumed to have remained active until the end of the study.  (Note
+  that in the \textit{C. diff} case, we can simply reuse the events
+  file for this.)
+
+\item New options `lookback', `lookahead', and
+  `event\_discretization\_points' in section `preprocessing' are
+  required; they give $\mathcal F$, $\mathcal F$, and $N_\mathcal W$
+  respectively.
+
+\item There is no `benchmarking' convenience option. Benchmarking will
+  have to be set up manually (i.e., by setting up a configuration file
+  that sets up the model without phylogenetic aggregation and invokes
+  the comparison method crossvalidation, and comparing the results
+  separately to those generated using a separate configuration file
+  which apply the MITRE methods to data that has been phylogenetically
+  aggregated.)
+
+\item The option `load\_example' is no longer available, as none of the example
+  problems have the requisite structure.
+  
+\item Preprocessing proceeds normally, except that the temporal
+  resolution filter specified by `density\_filter\_n\_samples', etc.,
+  is not applied. After normal preprocessing concludes, the
+  transformation process outlined above is carried out to generate a
+  new dataset.  \textit{Then} the temporal resolution filter is
+  applied to the transformed data. (This allows us to require
+  each pseudo-subject to have, e.g., at least one observation in $[0,
+    \mathcal L/2]$ and one in $[\mathcal L/2, \mathcal L]$.)
+
+\item Execution then proceeds normally. Note the output formats do
+  not change; it is the responsibility of the user to translate each
+  reported time window $(a,b)$ into ``time $(\mathcal L-a)$ before the
+  present to $(\mathcal L-b)$ before the present''.
+\end{itemize}
+
+% \section{Non-microbiome time-dependent covariates}
+% Theory
+% Implementation
+
+\end{document}
