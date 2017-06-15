@@ -148,7 +148,7 @@ def event_transform(config, data):
     events = pd.read_csv(event_file, names=('subject','time'))
     
     if config.has_option('data','censoring_file'):
-        censoring_file = config.get('data','censoring_file'))
+        censoring_file = config.get('data','censoring_file')
         censoring = pd.read_csv(censoring_file, index_col=0, names=('time',))
     else:
         censoring = pd.DataFrame({'time': []})
