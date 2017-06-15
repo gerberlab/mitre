@@ -481,9 +481,17 @@ def preprocess_step2(config, data):
         if config.getboolean('preprocessing','aggregate_on_phylogeny'):
             logger.info('Phylogenetic aggregation begins.')
             jplace_file = config.get('data', 'jplace_file') 
+
+            if config.has_option('data','sequence_key'):
+                sequence_file = config.get('data','sequence_key')
+                rename_placed_sequences = basic.fasta_to_dict(sequence_file)
+            else:
+                rename_placed_sequences = {}
+            
             data, _, _ = pplacer.aggregate_by_pplacer_simplified(
                 jplace_file,
                 data
+                rename_placed_sequences=rename_placed_sequences
             )
             has_tree = True
             describe_dataset(data,'After phylogenetic aggregation:')

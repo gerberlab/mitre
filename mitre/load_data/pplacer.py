@@ -134,7 +134,7 @@ def reformat_tree(jplace):
         
     return new_tree, leaf_to_new_id, new_id_to_old_leaf_names
 
-def organize_placements(jplace_as_dict):
+def organize_placements(jplace_as_dict, rename_placed_sequences={}):
     """ Extract simple list of placement candidates from jplace import.
 
     Input should be the result of load_jplace.
@@ -148,6 +148,10 @@ def organize_placements(jplace_as_dict):
 
     Edge numbers, which in the current somewhat recondite scheme become
     node names, are converted to strings.
+
+    The sequence names in the jplace file are looked up in
+    rename_placed_sequences and, if present, replaced with
+    corresponding values before the output is returned.
 
     """
     placements = {}
@@ -166,7 +170,8 @@ def organize_placements(jplace_as_dict):
         this_sequence_placements.sort()
         for key in keys:
             placements[key] = this_sequence_placements[:]
-    return placements
+    return {rename_placed_sequences.get(k,k): v for k,v in
+            placements.iteritems()}
                               
 def extract_weights(tree, placements, target_sequences, prune=True):
     """ Identify OTU ancestors, subtree weights.
@@ -648,7 +653,7 @@ def extract_weights_simplified(tree, placements, target_sequences, prune_before_
     return sequence_to_all_ancestors, node_to_weight, tree, node_to_sequences
 
 
-def aggregate_by_pplacer_simplified(jplace_filename, input_dataset):
+def aggregate_by_pplacer_simplified(jplace_filename, input_dataset, rename_placed_sequences={}):
     """ Aggregation on phylogenetic tree using pplacer results (simple)  
 
     This proceeds much as aggregate_by_pplacer. However, instead of
@@ -689,13 +694,15 @@ def aggregate_by_pplacer_simplified(jplace_filename, input_dataset):
     results will in any case reveal that a rule attaching to C refers
     to a group of bacteria including OTU2 but not OTU1.
 
+    rename_placed_sequences will be passed to organize_placements.
+
     Return and other behavior the same as for aggregate_by_pplacer.
 
     """
     logger.info('Loading and reprocessing phylogenetic placements...')
     jplace = load_jplace(jplace_filename)
     tree, _, _  = reformat_tree(jplace)
-    placements = organize_placements(jplace)
+    placements = organize_placements(jplace, rename_placed_sequences)
     target_sequences = list(
         set(placements).intersection(input_dataset.variable_names)
     )
