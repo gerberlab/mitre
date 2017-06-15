@@ -165,13 +165,20 @@ def event_transform(config, data):
 
     disc_points = np.linspace(data.experiment_start, data.experiment_end, n_disc_points + 1)[1:]
 
+    logger.info('Discretization points:')
+    logger.info(str(disc_points))
     # Generate all the pseudosubjects.
 
     pseudosubjects = []
     for subject_index, subject_ID in enumerate(data.subject_IDs):
+        logger.info('Processing subject %d (%s)' %
+                    (subject_index, subject_ID))
         this_subject_event_times = events[events.subject == subject_ID].time.values
+        logger.info('Event times:')
+        logger.info(str(this_subject_event_times))
         # The above is now an np array
         for j,Wj in enumerate(disc_points):
+            logger.info('Discretization point %.3f' % Wj)
             # Two-pronged test
             # This pair generates a pseudosubject if:
             # 1. An event happens in (W_j, W_j + F)
@@ -182,13 +189,18 @@ def event_transform(config, data):
                 (this_subject_event_times <= Wj + lookahead)
             )
             if n_qualifying_events:
+                logger.info('Event occurs, setting outcome to True')
                 outcome = True
             elif censoring.loc[subject_ID].time >= (Wj + lookahead):
                 outcome = False
+                logger.info('No event occurs and no censorship, outcome False')
             else:
+                logger.info('Censored at time %.3f, skipping' % censoring.loc[subject_ID].time)
                 break
             new_ID = str(subject_ID) + '_%d' % j
             pseudosubjects.append((new_ID,subject_ID, subject_index, j, Wj, outcome))
+            logger.info('New pseudosubject:')
+            logger.info(str(pseudosubjects[-1]))
     pseudosubjects = pd.DataFrame(pseudosubjects,
                                   columns = ('new_ID','old_ID','old_subject_index','j','Wj','y'))
 
@@ -200,9 +212,9 @@ def event_transform(config, data):
     X = []
     T = []
     for i, subject_ID in enumerate(subject_IDs):
-        old_subject_ID = pseudosubjects[i].old_ID
-        old_subject_index = pseudosubjects[i].old_subject_index
-        Wj = pseudosubjects[i].Wj
+        old_subject_ID = pseudosubjects.loc[i,'old_ID']
+        old_subject_index = pseudosubjects.loc[i,'old_subject_index']
+        Wj = pseudosubjects.loc[i,'Wj']
         subject_data.loc[subject_ID] = data.subject_data.loc[old_subject_ID,:]
         timepoints = []
         samples = []
@@ -212,7 +224,7 @@ def event_transform(config, data):
                 samples.append(X[old_subject_index][q])
         X.append(samples)
         T.append(timepoints)
-                
+    
     effective.n_subjects = n_subjects
     effective.subject_IDs = subject_IDs
 
