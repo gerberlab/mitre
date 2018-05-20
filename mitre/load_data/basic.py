@@ -32,7 +32,7 @@ def load_abundance_data(filename, strip_quotes=True):
     df = pd.read_csv(filename,index_col=0,
                      converters={0:lambda x: str(x)})
     if strip_quotes:
-        df.rename(dequote, dequote)
+        df.rename(index=dequote, columns=dequote)
     return df
 
 def fasta_to_dict(filename):
@@ -109,7 +109,7 @@ def load_dada2_result(abundance_data_filename,
     abundances = load_abundance_data(abundance_data_filename)
     if sequence_id_filename is not None:
         sequence_names = fasta_to_dict(sequence_id_filename)
-        abundances = abundances.rename({}, sequence_names)
+        abundances = abundances.rename(index={}, columns=sequence_names)
     sample_metadata = load_sample_metadata(sample_metadata_filename)
     subject_data = load_subject_data(subject_data_filename)
     return combine_data(abundances, sample_metadata,
