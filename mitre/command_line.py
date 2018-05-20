@@ -10,13 +10,25 @@ import os
 import argparse
 import mitre.main
 
+def apparent_file(filename):
+    """ Check that the named file exists. """
+    # Yes, it would be better style to open the file and
+    # pass the handle to run_from_config file to avoid the possibility
+    # of deletion between the check and the open operation, but this
+    # is unlikely to be a major issue in practice in this case.
+    if os.path.exists(filename):
+        return filename
+    else:
+        raise argparse.ArgumentTypeError('Configuration file %s does not exist.' % filename)
+    
+
 def run():
     parser = argparse.ArgumentParser(
         description='Launch MITRE calculations as specified in configuration file.',
         epilog='See MITRE documentation for details on available operations and '
                'how to specify them in the configuration file format.')
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('config_file',type=str,help='configuration file to read', nargs='?')
+    group.add_argument('config_file', help='configuration file to read', nargs='?', type=apparent_file)
     group.add_argument('-t', '--test',
                         action='store_const',
                         dest='action',
