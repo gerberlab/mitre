@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 import multiprocessing as mp
 import logging
+import warnings
 
 logger = logit_rules.logger
 
@@ -331,6 +332,13 @@ def preprocess_step1(config):
     try:
         outcome_positive_value = int(outcome_positive_value)
     except ValueError:
+        if outcome_positive_value.lower() in ('true','false'):
+            message = ('Boolean outcome values should specified as 1 or 0 '
+                       '(not the strings "true", "false", or derivatives of these) '
+                       '- the currently specified value will be interpreted as a '
+                       'generic categorical value which will probably lead to '
+                       'undesirable behavior!')
+            warnings.warn(message)
         pass
 
     # 2a. Additional covariates. Assume that these are provided as
@@ -349,6 +357,15 @@ def preprocess_step1(config):
             try: 
                 state = int(state)
             except ValueError:
+                if state.lower() in ('true','false'):
+                    message = (
+                        'Boolean default states should specified as 1 or 0 '
+                        '(not the strings "true", "false", or derivatives of these) '
+                        '- the currently specified value will be interpreted as a '
+                        'generic categorical value which will probably lead to '
+                        'undesirable behavior!'
+                    )
+                    warnings.warn(message)
                 pass
             additional_covariate_default_states.append(state)
     else:
@@ -376,6 +393,11 @@ def preprocess_step1(config):
             additional_covariate_default_states = additional_covariate_default_states,
             additional_subject_continuous_covariates = additional_subject_continuous_covariates,
             )
+    if len(np.unique(data.y)) == 1:
+        message = ('All subjects have the same outcome. No model can be trained '
+                   'based on this data. Double-check that the outcome variable '
+                   ' is correctly encoded?')
+        warnings.warn(message)
     describe_dataset(data, 'Data imported (before any filtering:)')
 
     
@@ -759,6 +781,11 @@ def sample(config, model=None):
 
     if model is None:
         raise ValueError('Model must be passed as argument if not specified in config file.')
+
+    if len(np.unique(model.data.y)) == 1:
+        raise ValueError('Degenerate training data '
+                         '(all subjects have the same outcome)- '
+                         'sampling would sample only from the prior.')
     
     l = [hamming(model.data.y,t) for t in model.rule_population.flat_truth]
     arbitrary_rl = rules.RuleList(
