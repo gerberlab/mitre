@@ -110,7 +110,7 @@ class PrimitiveRule:
         if self.type_ == 'slope':
             A = np.ones((n_points,2))
             A[:,0] = t
-            (slope, intercept), _, _, _ = np.linalg.lstsq(A,x)
+            (slope, intercept), _, _, _ = np.linalg.lstsq(A,x, rcond=None)
             return slope
 
         if self.type_ == 'average':
