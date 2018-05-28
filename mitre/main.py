@@ -12,7 +12,7 @@ from load_data import basic, pplacer, taxonomy_annotation
 import data_processing.transforms as transforms
 import data_processing.filtering as filtering
 from data_processing.crossvalidation import stratified_k_folds, leave_one_out_folds, debug_leave_one_out_folds
-from mitre import logit_rules, comparison_methods, posterior
+from mitre import logit_rules, comparison_methods, posterior, simulated_data
 import mitre.rules as rules
 from scipy.spatial.distance import hamming
 from scipy.stats import dirichlet
@@ -59,7 +59,8 @@ def run_from_config_file(filename):
             if config.getboolean('general','verbose'):
                 logger.setLevel(logging.INFO)
 
-    if config.has_section('preprocessing'):
+    if (config.has_section('preprocessing') or
+        config.has_section('simulated_data')):
         current_dataset = preprocess(config)
 
     if config.has_section('model'):
@@ -152,7 +153,9 @@ def benchmark(config):
     if config.has_option('benchmarking','load_data_from_pickle'):
         with open(config.get('benchmarking',
                              'load_data_from_pickle')) as f:
-            ra_data = pickle.load(f)  
+            ra_data = pickle.load(f)
+        if config.has_section('simulated_data'):
+            raise ValueError('Cannot simultaneously benchmark, load data from a file, and simulate data (simulate the data first and then benchmark instead.)')
     else: 
         ra_data = preprocess_step1(config)
 
@@ -299,8 +302,12 @@ def load_example(config, example_name):
             value = os.path.join(data_directory, value)
         config.set('data',option,value)
 
+
 def preprocess_step1(config):
     """ Load data, apply initial filters and convert to RA, create Dataset object.
+
+    If specified, generate simulated data based on the data that would 
+    otherwise be loaded, and return (after processing) that dataset instead.
 
     """
     # 0. If necessary, update the configuration to contain the appropriate 
@@ -393,6 +400,12 @@ def preprocess_step1(config):
             additional_covariate_default_states = additional_covariate_default_states,
             additional_subject_continuous_covariates = additional_subject_continuous_covariates,
             )
+
+
+    if config.has_section('simulated_data'):
+        logger.info('Data simulation begins.')
+        data = simulated_data.run(config, data)
+    
     if len(np.unique(data.y)) == 1:
         message = ('All subjects have the same outcome. No model can be trained '
                    'based on this data. Double-check that the outcome variable '

@@ -728,6 +728,61 @@ in section `comparison\_methods' are:
   the notation of the MITRE manuscript.
 \end{description}
 
+\section{Simulated data}\label{simulated_data}
+If this section is present, a synthetic dataset will be generated and
+MITRE will then be applied to the synthetic data set as specified in
+the other sections of the configuration file. An ordinary input
+dataset must be specified as usual in the `data' section, to be used
+as a template that informs the simulation of the synthetic data.
+
+Options in section `simulated\_data', all mandatory, are:
+\begin{description}
+\item[num\_subjects] Integer. Number of subjects to simulate.
+\item[num\_times\_sim ] Integer. Number of time points to simulate per subject.
+\item[time\_window\_width ] Numeric. Width of time window for the
+  introduced perturbation.
+\item[min\_num\_time\_points\_in\_window] Integer. Subjects within the
+  template data set must have at least this many observations within
+  the simulation target time window to be used to train the simulation
+  model.
+\item[min\_time\_points\_in\_data ] Integer. Subjects in template data
+  set must have at least this many total observations to be used to
+  train the simulation model.
+\item[time\_point\_std\_percent ] Float. Standard deviation of
+  truncated Gaussian noise used to add irregularity to time point
+  spacing, as fraction of the average interval between time points.
+\item[include\_start\_time] Float. Simulate data points in a window
+  starting here.
+\item[include\_end\_time ] Float. Simulate data points in a window ending here.
+\item[init\_mean ] Float. Mean relative abundance for simulated clade.
+\item[num\_perturbations] Integer, allowed values are 1 and 2. Perturb
+  this many clades in subjects with positive outcome.
+\item[perturb\_mean] Float. Mean size of perturbation.
+\item[perturb\_std\_percent] Float. Standard deviation of perturbation
+  effects across subjects (as fraction of `perturb\_size').
+\item[init\_std\_percent] Float. Standard deviation of initial value
+  in time-series (as fraction of `init\_mean').
+\item[data\_std\_percent] Float. Standard deviation of measurement error
+  in time-series (as fraction of `init\_mean').
+\item[time\_std\_percent] Float. Day to day standard deviation
+  (as fraction of `init\_mean').
+\item[min\_clade\_abundance] Float. When picking clades to perturb,
+  minimum abundance in any subject/time point.
+\item[max\_clade\_abundance ] Float. When picking clades to perturb,
+  maximum abundance in any subject/time point.
+\item[max\_otus\_in\_clade ] Integer. When picking clades to perturb,
+  maximum number of OTUs allowd.
+\item[pickle\_simulation\_result] Boolean. If true, save simulated
+  dataset to pickle before proceeding.
+\item[save\_perturbation\_info ] Boolean. If true, write a text file
+  listing the clades where the perturbations have been injected and
+  the corresponding time windows.
+\item[counts\_concentration ] Float. Concentration parameter for
+  Dirichlet-multinomial distribution for count data.
+\item[num\_counts ] Int. Number of sequencing reads to simulate.
+
+\end{description}
+
 \section{Benchmarking}\label{benchmarking}
 If this section is present:
 \begin{enumerate}
