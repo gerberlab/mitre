@@ -639,8 +639,23 @@ def sim_dataset(data, config):
         ]
         rand_window = [good_windows[numpy.random.randint(len(good_windows))]]
     else:
-        rand_clade = list(np.random.choice(good_clades,2,replace=False))
-        rand_window = list(np.random.choice(good_windows,2))
+        # Note that because of the way the data is generated
+        # we don't want one clade to contain the other- if the
+        # time windows overlap, data for shared OTUs would be overwritten,
+        # rather than receiving two perturbations
+        overlapping = True
+        while overlapping:
+            rand_clade = [data['clades'][i] for i in
+                          np.random.choice(good_clades,2,replace=False)]
+            if not set(rand_clade[0]).intersection(rand_clade[1]):
+                overlapping = False
+                logger.info('Confirmed target clades do not overlap')
+            else:
+                logger.info('Clades overlap, retrying')
+        # can't use random.choice on good_windows, it looks like a
+        # 2D array
+        window_i, window_j = np.random.randint(0, len(good_windows), 2)
+        rand_window = [good_windows[window_i], good_windows[window_j]]
 
     logger.info('Perturbing clade(s) %s' % str(rand_clade))
     logger.info('Applying perturbation in window(s) %s' % str(rand_window))

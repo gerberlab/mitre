@@ -287,8 +287,9 @@ def load_example(config, example_name):
         config.add_section('description')
     if not config.has_section('data'):
         config.add_section('data')
-    
-    config.set('description','tag', default_parser.get(example_name, 'tag'))
+
+    if not config.has_option('description','tag'):
+        config.set('description','tag', default_parser.get(example_name, 'tag'))
     options.remove('tag')
 
     # Find the directory with the relevant data files.
