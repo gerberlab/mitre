@@ -504,12 +504,12 @@ def generate_noisy_interp_times(config):
     std = float(config['time_point_std_percent'])*typical_spacing
     t = numpy.linspace(start=start_time,
                      stop=end_time,
-                     endpoint=True,
-                     num=num_times)
+                     endpoint=False,
+                     num=num_times) + 0.5*typical_spacing
     delta = std * np.random.randn(num_times)
     # Tweak this a bit to reduce the likelihood of pathological cases
-    delta = np.fmax(delta,-0.5*typical_spacing)
-    delta = np.fmin(delta,0.5*typical_spacing)
+    delta = np.fmax(delta,-0.249*typical_spacing)
+    delta = np.fmin(delta,0.249*typical_spacing)
     # Don't move the start/end times outside the specified window
     if delta[0] < 0:
         delta[0] = 0
