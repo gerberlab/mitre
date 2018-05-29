@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from ..rules import Dataset
 from ..data_processing import filtering
+from ete3 import Tree
 
 dequote = lambda s: s.strip('"')
 
@@ -102,7 +103,7 @@ def load_subject_data(filename):
     df = pd.read_csv(filename,index_col=0)
     return df
 
-def load_dada2_result(abundance_data_filename, 
+def load_16S_result(abundance_data_filename, 
                       sample_metadata_filename, subject_data_filename,
                       sequence_id_filename=None,
                       **kwargs):
@@ -234,3 +235,54 @@ def combine_data(abundance_data,
         result.generate_additional_covariate_matrix()
         
     return result
+
+def load_metaphlan_abundances(abundance_file):
+    """ Reformat a Metaphlan output table.
+
+    Assumes abundance_file is the name of a tab-delimited
+    file, one row per clade, one column per sample.
+
+    Changes percentages to fractions and transposes the table,
+    returning a DataFrame.
+
+    """
+    raw = pd.read_table(abundance_file,index_col=0)
+    return 0.01*raw.T
+
+def load_metaphlan_result(abundance_data_filename,
+                          sample_metadata_filename,
+                          subject_data_filename,
+                          do_weights=False,
+                          weight_scale = 1.0,
+                          **kwargs):
+    abundances = load_metaphlan_abundances(abundance_data_filename)
+    assert 'k__Bacteria' in abundances.columns
+    sample_metadata = load_sample_metadata(sample_metadata_filename)
+    subject_data = load_subject_data(subject_data_filename)
+    data = combine_data(abundances, sample_metadata,
+                        subject_data,
+                        **kwargs)
+    # Create the variable tree and tweak the prior here
+    names_to_nodes = {}
+    for name in abundances.columns:
+        names_to_nodes[name] = Tree(name=name, dist=1.0)
+    for k,v in names_to_nodes.iteritems():
+        taxonomy = k.split('|')
+        if len(taxonomy) == 1:
+            continue
+        parent = '|'.join(taxonomy[:-1])
+        parent_node = names_to_nodes[parent]
+        parent_node.add_child(v)
+    root = names_to_nodes['k__Bacteria']
+    if do_weights:
+        for i,v in enumerate(data.variable_names):
+            if v in names_to_nodes:
+                data.variable_weights[i] = (
+                    weight_scale *
+                    (1 + len(names_to_nodes[v].get_descendants()))
+                )
+        
+    data.variable_tree = root
+    
+        
+    return data

@@ -104,9 +104,10 @@ a sample configuration file to suit your needs; an example file is
 provided in chapter \ref{sample} below.
 
 
-\chapter{Formatting input data for MITRE}
+\chapter{Formatting input data for MITRE: standard 16S data}
 This chapter describes, with examples, how to prepare input data files
-for MITRE.
+for MITRE when the data is (as is typical) 16S-based abundance data.
+
 
 \section{Required files}
 \subsection{Abundance table}\label{abundance_data}
@@ -208,6 +209,29 @@ When a placement for an OTU was not predicted at a particular level,
 the entry should be NA or empty.  Note that this is the format that
 results from passing the output of \texttt{dada2}'s
 \texttt{addSpecies} function to \texttt{write.csv}.
+
+\chapter{Formatting input data for MITRE: metaphlan results}
+This chapter describes how to prepare input data files
+for MITRE when the data is taxonomic abundance estimates generated
+by metaphlan.
+
+\section{Required files}
+\subsection{Abundance table}\label{metaphlan_abundance_data}
+The abundance table should be Metaphlan's standard tab-delimited
+clade abundance table; the upper left corner might look like, e.g.,
+\begin{lstlisting}[caption=Example abundance data table]
+  Taxonomy	S001	S002
+  k__Bacteria	100	100
+  k__Bacteria|p_Actinobacteria	5.6	2.7
+\end{lstlisting}
+Note that percentages will internally be divided by 100 to convert to
+relative abundance fractions. The clade name formatting will be used
+to establish a tree relating the clades in which each edge
+has length 1.0.
+
+\subsection{Sample metadata table} Same format as described in \ref{sample_metadata}.
+
+\subsection{Subject data table} Same format as described in \ref{subject_data}.
 
 \chapter{Quick guide to available MITRE output types}
 MITRE offers a number of different output options. This section
@@ -334,7 +358,7 @@ Options allowed in section `description' are:
 Options allowed in section `data' are:
 \begin{description}
 \item[load\_example] Allowed values are `bokulich', `david',
-  `digiulio' or `karelia'. If one of these values is given,
+  `digiulio', `karelia', or `t1d'. If one of these values is given,
   MITRE will load one of the pre-packaged example datasets, consisting
   of data from, respectively, \begin{itemize}
   \item Bokulich, N. A., et al., ``Antibiotics, birth mode, and diet
@@ -349,13 +373,25 @@ Options allowed in section `data' are:
   \item Vatanen, T., et al., ``Variation in Microbiome LPS
     Immunogenicity Contributes to Autoimmunity in Humans'',
     \textit{Cell} 165(4): 842 -- 853 (2016),
+  \item Kostic, A., et al., ``The Dynamics of the Human Infant Gut
+    Microbiome in Development and in Progression toward Type 1
+    Diabetes.'', \textit{Cell Host \& Microbe}
+    (2015): \texttt{doi:10.1016/j.chom.2015.01.001}.
 \end{itemize}
-reprocessed as described in the MITRE supplementary note.  If this
-option is given, no other options in this section are required. Note
-that the `tag' option, above, is overwritten in this case.
+  The first four datasets were reprocessed as described in the MITRE
+  supplementary note. For Kostic et al, metaphlan results and WGS
+  sample metadata from was downloaded from the DIABIMMUNE website
+  (\url{https://pubs.broadinstitute.org/diabimmune/t1d-cohort}) and
+  minimally reformatted using a script distributed with MITRE.  If
+  this option is given, no other options in this section are
+  required.
+\item[data\_type] `16s' (the default) or `metaphlan'. Optional. If
+  `metaphlan', MITRE will expect Metaphlan clade abundance estimates
+  as input and handle them specially. 
 \item[abundance\_data] Filename or path to a table of OTU abundance
-  data, formatted as described in section
-  \ref{abundance_data}. Required, unless `load\_example' is set.
+  data, formatted as described in section \ref{abundance_data} (or
+  \ref{metaphlan_abundance_data}) if `data\_type' is
+  `metaphlan'. Required, unless `load\_example' is set.
 \item[sample\_metadata]
   Filename or path to a table giving a subject and timepoint for each
   sample in the abundance table, formatted as described in section
@@ -436,6 +472,17 @@ that the `tag' option, above, is overwritten in this case.
   supplementary note to the MITRE manuscript for full
   details. Subjects where data for any of these variables are missing
   will be dropped from the calculation. Optional.
+
+\item[metaphlan\_do\_weights] Optional Boolean, default false, ignored
+  unless `data\_type' is `metaphlan'. If this is set, variables
+  corresponding to clades will be weighted according to the length of
+  the subtree beneath them (effectively, the number of descendant
+  clades for which a row is present in the metaphlan input file);
+  otherwise, all clades will have the same weight.
+\item[metaphlan\_weight\_scale] Optional float, default 1.0, ignored
+  unless `data\_type' is `metaphlan'. If `metaphlan\_do\_weights' is set,
+  scale the subtree lengths by this value. 
+  
 \end{description}
 
 \section{Preprocessing}\label{preprocessing}

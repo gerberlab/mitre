@@ -209,8 +209,8 @@ def benchmark(config):
         raise ValueError('Neither crossvalidation method was specified.')
 
     # debug output
-    with open('benchmark_debug.pickle','w') as f:
-        pickle.dump([ra_data, comparison_data_1, comparison_data_2, data],f)
+    #with open('benchmark_debug.pickle','w') as f:
+    #    pickle.dump([ra_data, comparison_data_1, comparison_data_2, data],f)
 
 def log_transform_if_needed(config, target_data):
     if config.has_option('preprocessing', 'log_transform'):
@@ -265,7 +265,7 @@ def preprocess(config):
 def load_example(config, example_name):
     """ Populate configuration object with the settings for an example dataset.
 
-    Valid options are 'bokulich', 'david', 'karelia', and 'digiulio'.
+    Valid options are 'bokulich', 'david', 'karelia', 't1d', and 'digiulio'.
 
     """
     # Find the file with the configuration settings.
@@ -277,7 +277,7 @@ def load_example(config, example_name):
     default_parser.read(default_cfg_file)
 
     # Read the appropriate section and update config.
-    examples = {'bokulich', 'david', 'karelia', 'digiulio'}
+    examples = {'bokulich', 'david', 'karelia', 'digiulio', 't1d'}
     if example_name not in examples:
         raise ValueError('Valid example datasets are: ' + 
                          ', '.join(examples))
@@ -390,7 +390,34 @@ def preprocess_step1(config):
     else:
         additional_subject_continuous_covariates = []
 
-    data = basic.load_dada2_result(
+    # Loading the data. This depends on what type of
+    # data we have.
+    data_type = '16s'
+    if config.has_option('data', 'data_type'):
+        data_type = config.get('data','data_type').lower()
+    assert data_type in ('16s','metaphlan')
+    if data_type == 'metaphlan':
+        do_weights = False
+        weight_scale = 1.0
+        if config.has_option('data', 'metaphlan_do_weights'):
+            do_weights = config.getboolean('data','metaphlan_do_weights')
+        if config.has_option('data', 'metaphlan_weight_scale'):
+            weight_scale = config.getfloat('data','metaphlan_weight_scale')
+        data = basic.load_metaphlan_result(
+            counts_file,
+            metadata_file,
+            subject_file,
+            do_weights = do_weights,
+            weight_scale = weight_scale,
+            outcome_variable=outcome_variable,
+            outcome_positive_value=outcome_positive_value, 
+            additional_subject_categorical_covariates = additional_subject_covariates,
+            additional_covariate_default_states = additional_covariate_default_states,
+            additional_subject_continuous_covariates = additional_subject_continuous_covariates,
+        )
+
+    else: # default to assuming 16s
+        data = basic.load_16S_result(
             counts_file,
             metadata_file,
             subject_file,
@@ -400,7 +427,7 @@ def preprocess_step1(config):
             additional_subject_categorical_covariates = additional_subject_covariates,
             additional_covariate_default_states = additional_covariate_default_states,
             additional_subject_continuous_covariates = additional_subject_continuous_covariates,
-            )
+        )
 
 
     if config.has_section('simulated_data'):

@@ -156,7 +156,8 @@ class L1LogisticRegressionWrapper(Wrapper):
         By default, uses L1 regularization with the strength chosen from
         10 options spaced logarithmically between 1e-4 and 1e4 
         (the sklearn LogisticRegressionCV default) using
-        min(10,data.n_subjects) folds of crossvalidation, but other
+        min(10,min(sum(data.y), data.n_subjects - sum(data.y))) 
+        folds of crossvalidation, but other
         options may be chosen by specifing arguments to the 
         LogisticRegressionCV constructor through *args and **kwargs.
         
@@ -167,7 +168,12 @@ class L1LogisticRegressionWrapper(Wrapper):
 
         """
         Wrapper.__init__(self,data,N_i,N_c)
-        default_folds = min(10,data.n_subjects)
+        smallest_class = (
+            min(sum(data.y),
+                data.n_subjects - sum(data.y))
+        )
+        
+        default_folds = min(10,smallest_class)
         default_classifier_arguments = {
             'cv': default_folds,
             'solver': 'liblinear',

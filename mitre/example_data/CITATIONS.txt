@@ -1,4 +1,4 @@
-Example data in this directory comes from the following four papers:
+Example data in this directory comes from the following five papers:
 
 Bokulich, N. A., et al., ``Antibiotics, birth mode, and diet shape
 microbiome maturation during early life'', Science
@@ -13,4 +13,13 @@ microbiota during pregnancy'', PNAS 112(35): 11060–5 (2015)
 Vatanen, T., et al., ``Variation in Microbiome LPS Immunogenicity
 Contributes to Autoimmunity in Humans'', Cell 165(4):842–853 (2016)
 
-It has been reprocessed as described in the MITRE manuscript.
+Kostic, A., et al., ``The Dynamics of the Human Infant Gut Microbiome
+in Development and in Progression toward Type 1 Diabetes.'', Cell Host
+& Microbe (2015). doi:10.1016/j.chom.2015.01.001
+
+Data from the first four papers has been reprocessed as described in
+the MITRE manuscript.  Metaphlan results and WGS sample metadata from
+Kostic et al were downloaded from the DIABIMMUNE website
+(https://pubs.broadinstitute.org/diabimmune/t1d-cohort)
+and the metadata Excel sheet exported to CSV format and reprocessed as
+shown in t1d/process_t1d_wgs.py.
