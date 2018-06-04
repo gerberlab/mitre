@@ -1465,9 +1465,11 @@ def do_postprocessing(config, sampler=None):
         burnin_fraction = config.getfloat('postprocessing','burnin_fraction')
     else:
         burnin_fraction = 0.05
-
-    summarizer = posterior.PosteriorSummary(sampler, burnin_fraction)
+        
     prefix = config.get('description', 'tag')
+    summarizer = posterior.PosteriorSummary(sampler, burnin_fraction,
+                                            tag=prefix)
+
 
     if (config.has_option('postprocessing','quick_summary') and
         config.getboolean('postprocessing','quick_summary')):

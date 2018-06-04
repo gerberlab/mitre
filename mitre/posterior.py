@@ -5,6 +5,7 @@ Also includes output for mixing diagnostics, which aren't summaries of
 the posterior as such.
 
 """
+import pandas as pd
 import logit_rules 
 import rules 
 import prior_by_primitive as pbp
@@ -78,7 +79,9 @@ class PosteriorSummary():
         self.reports = {}
 
     def mixing_diagnostics(self):
-        """ Plot various parameters versus MCMC iteration, for diagnostic purposes.
+        """ Plot/tabulate some parameters vs MCMC iteration.
+
+        For diagnostic purposes. 
 
         Values output include the likelihood, prior, rule list length
         (total number of primitives,) a subset of the auxiliary
@@ -94,7 +97,7 @@ class PosteriorSummary():
             omega_spacing = 5
         else:
             omega_spacing = 20
-        omegas = np.vstack([state.omega for state in sampler.states])[:,::n_subjects]
+        omegas = np.vstack([state.omega for state in sampler.states])[:,::omega_spacing]
 
         vectors = [sampler.likelihoods, 
                    sampler.priors,
@@ -116,12 +119,23 @@ class PosteriorSummary():
             titles.append(v)
             labels.append(v)
 
+
+        table = pd.DataFrame()
         for vector, title, label in zip(vectors, titles, labels):
             plt.figure()
             plt.plot(vector)
             plt.title(title)
             plt.xlabel('MCMC iteration')
             plt.savefig('%s%s.pdf' % (self.tag, label))
+            if label != 'omegas':
+                table.loc[:,label] = vector
+
+        _, n_omegas = omegas.shape
+        for j,i in enumerate(np.arange(n_subjects)[::omega_spacing]):
+            table.loc[:,'omega_%d' % i] = omegas[:,j]
+
+        table.to_csv('%s_mcmc_traces.csv' % self.tag)
+            
 
     def tabulate(self):
         """ Count samples primitives appear in, make posterior distributions, collect other info.
