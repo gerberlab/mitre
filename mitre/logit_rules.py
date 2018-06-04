@@ -14,7 +14,6 @@ import pypolyagamma
 import multiprocessing as mp
 from Queue import Empty
 import time
-import random
 import efficient_likelihoods
 
 default_n_workers = 6
@@ -822,7 +821,10 @@ class LogisticRuleSampler(RuleListSampler):
             return
 
         for _ in xrange(N_updates):
-            i,j = random.choice(positions)
+            # Can't use np.random.choice(positions),
+            # positions looks like a 2-d array
+            choice_index = np.random.choice(len(positions))
+            i,j = positions[choice_index]
             primitive = rule_list[i][j]
             k0 = self.model.rule_population.get_primitive_index(primitive)
             # What are the relative multinomial pieces of the prior
@@ -1200,7 +1202,10 @@ class LogisticRuleSampler(RuleListSampler):
         positions = [(i,j) for i,subrule in 
                      enumerate(current_rl.rules) for 
                      j,_ in enumerate(subrule)]
-        rule_index, primitive_index = random.choice(positions)
+        # Can't use np.random.choice(positions),
+        # positions looks like a 2-d array
+        choice_index = np.random.choice(len(positions))
+        rule_index, primitive_index = positions[choice_index]
         comment = 'remove detector %d from rule %d' % (primitive_index,
                                                         rule_index)
         shorter_rule = current_rl.copy()

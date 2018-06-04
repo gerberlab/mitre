@@ -1,7 +1,7 @@
 """ Handle different operations (preprocessing, model-building, sampling, etc) based on config file.
 
 """
-import sys, pickle, ConfigParser, csv, os, json
+import sys, pickle, ConfigParser, csv, os, json, StringIO
 
 # Use a non-interactive matplotlib backend when MITRE is invoked from the command line.
 # We need to call this before importing any of the submodules that import matplotlib.
@@ -66,7 +66,12 @@ def run_from_config_file(filename):
     if config.has_section('model'):
         current_model = setup_model(config, data=current_dataset)
 
-    if config.has_section('sampling'):
+    if config.has_section('replicates'):
+        replicate_sampling(config, model=current_model)
+        # do sampling and postprocessing for each fold, then quit
+        return
+    
+    elif config.has_section('sampling'):
         current_sampler = sample(config, model=current_model)
 
     if config.has_section('postprocessing'):
@@ -1780,4 +1785,80 @@ def tabulate_metrics(cv_results, name):
     report = table.to_string(float_format=lambda x: '%.3g' % x)
     report = ('%s: \n' % name) + report  
     return report
+
+################################################################################
+def replicate_sampling(config, model=None):
+    """ Repeatedly sample from model and postprocess.
+
+    Understands options n_replicates, parallel_workers from
+    section 'replicates'
+
+    """
+    ###
+    # Extract options from configuration file
+    if config.has_option('replicates','parallel_workers'):
+        n_workers = config.getint('replicates','parallel_workers')
+    else:
+        n_workers = 1
+    n_replicates = config.getint('replicates','n_replicates')
+
+    targets = []
+    base_tag = config.get('description','tag')
+    base_seed = np.random.randint(2**32-1)
+    for i in xrange(n_replicates):
+        cache = StringIO.StringIO()
+        config.write(cache)
+        cache.seek(0)
+        config_copy = ConfigParser.ConfigParser()
+        config_copy.readfp(cache)
+        config_copy.set('description','tag', base_tag + ('_replicate_%d' % i))
+        targets.append((config_copy, model, base_seed+i))
+        
+    # Set up parallelized loop over replicates
+    job_queue = mp.Queue()
+    worker_args = (job_queue,)
+    processes = [
+        mp.Process(target=_replicant_worker, args=worker_args) for 
+        worker_index in xrange(n_workers)
+    ]
+    for (config_copy, model_reference, random_seed) in targets:
+        job_queue.put((config_copy, model_reference, random_seed))
+    for _ in xrange(n_workers):
+        job_queue.put('end')
+    for p in processes:
+        p.start()
+    for p in processes:
+        p.join()
+
+def _replicant_worker(argument_queue):
+    """Worker function for parallelizing MITRE replicates.
+
+    The worker repeatedly pulls (configuration file, model,
+    random_seed) tuples from the queue and runs sampling and
+    postprocessing for each.
+
+    Setting a new random seed for each individual job is not strictly
+    necessary for ensuring all worker processes behave differently,
+    but is sufficient (assuming the supplied seeds are distinct), 
+    and is easy.
+
+    Arguments:
+    argument_queue - each item should be a tuple (configuration file, 
+    model-or-None, random_seed) or the string 'end', which triggers
+    this function to return.
+
+    """
+    print 'worker'
+    while True:
+        item = argument_queue.get()
+        if item == 'end':
+            return
+        config, current_model, seed = item
+        np.random.seed(seed)
+        current_sampler = sample(config, model=current_model)
+        if config.has_section('postprocessing'):
+            current_summary = do_postprocessing(
+                config,
+                sampler=current_sampler
+            )
 

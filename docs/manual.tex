@@ -631,6 +631,21 @@ supplementary note for explanations of their significance.
   subtree weights $L_i$ (default 0.0).
 \end{description}
 
+\section{Replicates}\label{replicates}
+If this section is specified, sampling and postprocessing will be done
+as specified in relevant sections for multiple independent runs,
+optionally parallelized. Settings for comparison, crossvalidation,
+benchmarking, etc., will be ignored. Output files will be tagged with
+'\_replicate\_0', etc.
+
+Options allowed in section `replicates' are:
+\begin{description}
+\item[n\_replicates] Integer, required. Number of replicates to perform.
+\item[parallel\_workers] Integer, optional, default 1. Number of
+  processes to run in parallel.
+\end{description}
+
+
 \section{Sampling}\label{sampling}
 Options allowed in section `sampling' are:
 \begin{description}
@@ -690,7 +705,10 @@ The following settings, all optional, may be specified in section `postprocessin
     $\omega$, and parameters $f_w$, $c_w$, $\mu_L$, and $\sigma_L$
     (defined in the MITRE supplementary note) versus MCMC
     iteration. Results will be saved in
-    \texttt{[tag]\_likelihood.pdf}, \texttt{[tag]\_prior.pdf}, etc.
+    \texttt{[tag]\_likelihood.pdf}, \texttt{[tag]\_prior.pdf}, etc.,
+    and a table (which may grow large, as it contains one row per
+    MCMC iteration) is written to 
+    \texttt{[tag]\_mcmc\_traces.csv}.
     
 \end{description}
 

@@ -330,28 +330,75 @@ class PosteriorSummary():
             coefficient = lambda i: 'n/a'
             effect = lambda i: 'n/a'
             default_probability = 'n/a'
+            this_rule_probability = lambda i: 'n/a'
         elif beta_distribution is None:
             coefficient = lambda i: '%.3g' % beta[i]
-            effect = lambda i: ('Odds of positive outcome INCREASE by factor of %.3g' % np.exp(beta[i]) if
-                                beta[i] > 0 else
-                                'Odds of positive outcome DECREASE by factor of %.3g' % np.exp(-1.0*beta[i]))
+            effect = lambda i: (
+                ('Odds of positive outcome INCREASE (log-odds increase by %.3g)' %
+                 beta[i]) if beta[i] > 0 else
+                ('Odds of positive outcome DECREASE (log-odds decrease by %.3g)' %
+                 -1.0*beta[i])
+            )
             default_probability = '%.3g' % logit(beta[constant_term_index])
+            this_rule_probability = (
+                lambda i: logit(beta[i] + beta[constant_term_index])
+            )
         else:
-            coefficient = lambda i: '%.3g (%.3g -- %.3g)' % (beta[i], beta_low[i], beta_high[i])
-            default_probability = '%.3g (%.3g -- %.3g)' % tuple(map(logit,
-                                                                    (beta[constant_term_index], 
-                                                                     beta_low[constant_term_index], 
-                                                                     beta_high[constant_term_index])))
-            effect = lambda i: ('Odds of positive outcome INCREASE by factor of %.3g (%.3g - %.3g)' % 
-                                (np.exp(beta[i]), np.exp(beta_low[i]), np.exp(beta_high[i])) if
-                                beta[i] > 0 else
-                                'Odds of positive outcome DECREASE by factor of %.3g (%.3g - %.3g)' % 
-                                (np.exp(-1.0*beta[i]), np.exp(-1.0*beta_high[i]), np.exp(-1.0*beta_low[i])))
-            # Note the high-low swap here is deliberate: we are effectively resorting by absolute
-            # value.
+            coefficient = (
+                lambda i: '%.3g (%.3g -- %.3g)' %
+                (beta[i], beta_low[i], beta_high[i])
+            )
+            default_probability = (
+                '%.3g (%.3g -- %.3g)' % tuple(
+                    map(
+                        logit,
+                        (beta[constant_term_index], 
+                         beta_low[constant_term_index], 
+                         beta_high[constant_term_index])
+                    )
+                )
+            )
+            # Note, for higher precision we should take percentiles
+            # of (beta[i] + beta[constant_term_index]) rather than
+            # taking percentiles and then adding; however this
+            # treatment should be generally OK
+            this_rule_probability = (
+                lambda i: '%.3g (%.3g -- %.3g)' %
+                tuple(map(logit,
+                          (beta[i] + beta[constant_term_index], 
+                           beta_low[i] + beta[constant_term_index],
+                           beta_high[i] + beta[constant_term_index]))
+                      )
+            )
+            effect = (
+                lambda i: (
+                    ('Odds of positive outcome INCREASE (log-odds change by %s)' %
+                     coefficient(i)) if beta[i] > 0 else
+                    ('Odds of positive outcome DECREASE (log-odds change by %s)' %
+                     coefficient(i))
+                )
+            )
 
-        # initializing i here lets us smoothly increment it later
-        i = -1
+        # Describe the constant rule
+        constant_term_line = (
+            'If NO rules apply: positive outcome probability %s '
+            '(log-odds: %s)'
+            % (default_probability, coefficient(constant_term_index))
+        )
+        overall_lines.append(constant_term_line)
+        i = constant_term_index
+        additional_covariates = False
+        for feature, value in self.model.data.additional_covariate_encoding:
+            i += 1
+            this_coefficient = coefficient(i)
+            this_effect = effect(i)
+            covariate_line = ('Effect of feature "%s" == "%s": %s' %
+                              (feature, value, this_effect))
+            overall_lines.append(covariate_line)
+            additional_covariates = True
+        if additional_covariates:
+            overall_lines.append('\n')
+        
         for i,rule in enumerate(rule_list):
             rule_lines = []
             for p in rule:
@@ -364,33 +411,17 @@ class PosteriorSummary():
             k = np.sum(self.model.data.y[X[:,i]>0.])
             this_coefficient = coefficient(i)
             this_effect = effect(i)
+            this_probability = this_rule_probability(i)
             application_line = ('This rule applies to %d/%d (%.3f) subjects in dataset, '
                                 '%d/%d with positive outcomes (%.3f).' %
                                  (N,N_total,N/float(N_total),
                                   k,N,k/float(N)))
-            overall_lines.append('\nRule %d (coefficient %s):\n\t %s, if:' % 
-                                 (i,this_coefficient,this_effect)
+            overall_lines.append('\nRule %d (predicted positive outcome probability if only this rule is satisfied, %s):\n\t %s, if:' % 
+                                 (i,this_probability,this_effect)
                                 )
             overall_lines = overall_lines + rule_lines 
             overall_lines.append(application_line)
 
-        # Describe the constant rule
-        i += 1
-        constant_term_line = ('\nConstant term (coefficient %s):\n'
-                              '\tPositive outcome probability %s if no other rules apply'
-                              % (coefficient(i),default_probability))
-
-        overall_lines.append('\n')
-
-        for feature, value in self.model.data.additional_covariate_encoding:
-            i += 1
-            this_coefficient = coefficient(i)
-            this_effect = effect(i)
-            covariate_line = ('Effect of feature "%s" == "%s" (coefficient %s): %s' %
-                              (feature, value, this_coefficient, this_effect))
-            overall_lines.append(covariate_line)
-
-        overall_lines.append(constant_term_line)
 
         return '\n'.join(overall_lines) + '\n'
 
@@ -404,6 +435,13 @@ class PosteriorSummary():
         self.make_point_prediction()
         self.make_ensemble_prediction()
         lines = []
+        prior_empty_odds = self.model.hyperparameter_a_empty / (self.model.hyperparameter_b_empty)
+        posterior_empty_odds = (self.normalized_rl_total_primitive_distribution[0] /
+                                (1.0 - self.normalized_rl_total_primitive_distribution[0]))
+        bf_empty = posterior_empty_odds / prior_empty_odds
+        
+        lines.append('BAYES FACTOR FOR THE EMPTY RULE SET: %.3g\n\n' % bf_empty)
+
         lines.append('POINT SUMMARY:')
         lines.append(self.format_rl(self.point.rl, self.point_betas))
         lines.append('POINT SUMMARY CLASSIFIER PERFORMANCE:')
@@ -425,12 +463,6 @@ class PosteriorSummary():
         for frequency, n in self.rl_total_primitive_posterior[:N_best]:
             lines.append('\t%.3g\t\t%d' % (frequency, n))
 
-        prior_empty_odds = self.model.hyperparameter_a_empty / (self.model.hyperparameter_b_empty)
-        posterior_empty_odds = (self.normalized_rl_total_primitive_distribution[0] /
-                                (1.0 - self.normalized_rl_total_primitive_distribution[0]))
-        bf_empty = posterior_empty_odds / prior_empty_odds
-        
-        lines.append('\n Bayes factor for the empty rule set: %.3g' % bf_empty)
 
         report = '\n'.join(lines) + '\n'
         self.reports['quick'] = report
