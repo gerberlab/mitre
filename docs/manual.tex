@@ -438,7 +438,10 @@ Options allowed in section `data' are:
   \texttt{[tag]\_variable\_annotations.txt} at the conclusion of the
   preprocessing step, unless phylogenetic aggregation is not
   performed.
-    
+
+\item[placement\_table] Filename or path to a table of taxonomic
+  placements for OTUs, as described in section \ref{placement_table}.
+  
 \item[pplacer\_taxa\_table] Filename or path to a table from the
   pplacer reference package, formatted as described in section
   \ref{pplacer_taxa_table}. Required if `taxonomy\_source' is
@@ -532,6 +535,51 @@ where specified, any of these options may be omitted.
 \item[take\_relative\_abundance] Boolean. If True, abundance data will
   be converted to relative abundances by normalizing so that the sum
   of the data for each sample is 1.0.
+\item[do\_internal\_normalization] Boolean. If True, abundance data will
+  be normalized relative to the abundance of a specified set of variables.
+  This option is mutually exclusive with `take\_relative\_abundance'.
+  If this is true, `normalization\_variables\_file' or `normalize\_by\_taxon'
+  must be given.
+\item[internal\_normalization\_min\_factor] Numeric, optional.  Sets
+  the minimum normalization factor for internal normalization
+  (default: $1$.) An informative error is raised if we ever try to
+  normalize abundance data by dividing by a factor less than this.
+\item[normalization\_variables\_file] String. This should be the path
+  to a file containing one variable name per line. If
+  `do\_internal\_normalization' is true, the input data for these
+  variables will be added within each sample to produce a factor by
+  which the data for each individual variable will be divided. Note,
+  the input data is added, and the factor calculated, at the point in
+  the preprocessing at which conversion to relative abundance is
+  usually done; this is after the filter for `min\_overall\_abundance'
+  is applied but before any other filtering is done which could cause
+  variables to be dropped from the analysis.  Conceptually, this makes
+  sense as the primary intent of the `min\_overall\_abundance' filter
+  is to discard data that is thought to be possibly spurious, and so
+  unreliable; dropping variables for which data is believed to be
+  reliable, but which are not abundant enough that it is desirable to treat
+  them as possibly independent predictors of the outcome of interest, should
+  instead be done using the temporal abundance filtering options described
+  below. In any case, if any variable listed in this file is not found
+  as a variable in the model at the point of normalization, an error occurs.
+  Likewise, if the total abundance of these variables is zero for any sample
+  (that has not been discarded by the time normalization is done), an error
+  occurs. This option is mutually exclusive with `normalize\_by\_taxon'.
+
+\item[normalize\_by\_taxon] String, mutually exclusive with
+  `normalization\_variables\_file'. If this is given, a file formatted
+  as described in section \ref{placement_table} must be specified as
+  option `placement\_table' in section `data'.  That file will be
+  searched for OTUs which contain this exact string as their placement
+  at at least one taxonomic level. The total abundance of all
+  variables of the model at the point of normalization which belong to
+  the resulting list of target OTUs will be used to normalize the
+  data. It is an error if no such variables exist. To allow the user
+  to monitor which variables are found and used for normalization when
+  using this setting, an output table is written containing the
+  placement information for the matching variables (ending
+  `variables\_used\_for\_normalization.csv')
+
 \item[aggregate\_on\_phylogeny] Boolean. If True, introduce new
   variables corresponding to subtrees of the overall phylogeny of the
   OTUs, inferred from \texttt{pplacer} results given in the

@@ -34,6 +34,46 @@ def take_relative_abundance(data):
         new_data.X[i] = relative_abundances
     return new_data
 
+
+def do_internal_normalization(data,
+                              target_variable_names,
+                              reject_threshold=1e-6):
+    """ Normalize abundance measurements by sum of some variables. """
+    try:
+        target_indices = [data.variable_names.index(n) for n in
+                            target_variable_names]
+    except ValueError:
+        raise ValueError(
+            'Variable name %s specified for use in internal normalization,'
+            ' but not found in data. Double-check it is a valid name, and'
+            ' has not been accidentally removed by filtering settings.' %
+            n
+        )
+    new_data = data.copy()
+    n_subjects = len(new_data.X)
+    for i in xrange(n_subjects):
+        abundances = new_data.X[i]
+        target_abundances = abundances[target_indices, :]
+        # Data may be integer (counts): cast carefully
+        # to float
+        norm_factors = np.sum(target_abundances, axis=0).astype(np.float)
+        if not np.all(norm_factors > reject_threshold):
+            bad_indices = np.where(norm_factors <= reject_threshold) 
+            bad_timepoints = data.T[i][bad_indices]
+            subject_id = data.subject_IDs[i]
+            message = (
+                'Error normalizing data for subject %s: '
+                'sum of variables used for normalization is less than '
+                'the minimum %.3g at timepoints %s'
+                % (subject_id, reject_threshold,
+                   ','.join(['%.3g' % t for t in bad_timepoints])
+                )
+            )
+            raise ValueError(message)
+        normalized_abundances = abundances/norm_factors
+        new_data.X[i] = normalized_abundances
+    return new_data
+
 def aggregate_on_tree(data, tree_of_variables):
     """ Aggregate data for internal nodes of a tree.
 

@@ -446,7 +446,6 @@ def preprocess_step1(config):
         warnings.warn(message)
     describe_dataset(data, 'Data imported (before any filtering:)')
 
-    
     # 3. Filtering
 
     # 3a. Overall abundance filter
@@ -525,15 +524,111 @@ def preprocess_step1(config):
         data = transforms.select_subjects(data, indices_to_keep)
         logger.info('Subsampling, kept indices: %s' % str(indices_to_keep))
 
-    # 3e. Relative abundance transformation.
+    # 3e. Relative abundance transformation, or other normalization.
+    if (config.has_option('preprocessing', 'take_relative_abundance') and
+        config.has_option('preprocessing', 'do_internal_normalization')):
+        if (config.getboolean('preprocessing', 'take_relative_abundance') and
+            config.getboolean('preprocessing', 'do_internal_normalization')):
+            raise ValueError(
+                'Cannot both take relative abundance and do '
+                'internal normalization.'
+                )
+    
     if config.has_option('preprocessing', 'take_relative_abundance'):
         if config.getboolean('preprocessing','take_relative_abundance'):
             data = transforms.take_relative_abundance(data) 
             logger.info('Transformed to relative abundance.')
 
+    if config.has_option('preprocessing', 'do_internal_normalization'):
+        if config.getboolean('preprocessing','do_internal_normalization'):
+            normalization_variables = get_normalization_variables(config, data)
+            if config.has_option('preprocessing',
+                                 'internal_normalization_min_factor'):
+                threshold = config.getfloat(
+                    'preprocessing',
+                    'internal_normalization_min_factor'
+                )
+            else:
+                threshold = 1.0
+            data = transforms.do_internal_normalization(
+                data, normalization_variables, reject_threshold=threshold
+            ) 
+            logger.info('Internal normalization complete.')
+
     return data
 
+def get_normalization_variables(config, data):
+    """ Figure out which variables to normalize by, if relevant.
+    
+    If preprocessing/normalization_variables_file is set, loads that
+    file and reads a variable name from each line.
 
+    Returns a list of variable names (as strings).
+
+    """
+    if (config.has_option('preprocessing', 'normalization_variables_file')
+        and
+        config.has_option('preprocessing', 'normalize_by_taxon')):
+        raise ValueError('Mutually exclusive normalization options given.')
+    
+    if config.has_option('preprocessing', 'normalization_variables_file'):
+        filename = config.get(
+            'preprocessing',
+            'normalization_variables_file'
+        )
+        with open(filename) as f:
+            variables = [s.strip() for s in f.readlines()]
+        # Tolerate extra newlines, etc
+        result = [v for v in variables if v]
+        logger.info(
+            'Read %d variables for normalization from %s' %
+            (len(result), filename)
+        )
+        return result
+    elif config.has_option('preprocessing','normalize_by_taxon'):
+        if not config.has_option('data','placement_table'):
+            raise ValueError(
+                'A taxonomic placement table must be '
+                'specified to allow normalization by a particular taxon.'
+            )
+        placement_table_filename = config.get('data','placement_table')
+        if config.has_option('data','sequence_key'):
+            sequence_fasta_filename = config.get('data','sequence_key')
+        else:
+            sequence_fasta_filename = None
+        table = taxonomy_annotation.load_table(
+            placement_table_filename,
+            sequence_fasta_filename
+        )
+        target_taxon = config.get('preprocessing','normalize_by_taxon')
+        target_variables = []
+        for v in data.variable_names:
+            classifications = table.loc[v,:]
+            if target_taxon in classifications.values:
+                target_variables.append(v)
+        if not target_variables:
+            raise ValueError(
+                'Found no variables in designated normalization '
+                'taxon "%s".' % target_taxon
+            )
+        prefix = config.get('description', 'tag')
+        fname = prefix + '_variables_used_for_normalization.csv'
+        subtable = table.loc[target_variables,:]
+        subtable.to_csv(fname)
+        logger.info(
+            '%d variables in designated normalization taxon '
+            '%s found (see %s)' % (len(target_variables),
+                                   target_taxon,
+                                   fname)
+        )
+        return target_variables
+    else:
+        raise ValueError(
+            'Must set normalization_variables_file or '
+            'normalization taxon in section '
+            '"preprocessing" to do internal normalization.'
+        )
+    
 def preprocess_step2(config, data):
     """ Aggregate, optionally transform, temporal abundance filter, etc.
 

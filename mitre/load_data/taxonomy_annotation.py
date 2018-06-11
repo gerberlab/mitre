@@ -160,6 +160,29 @@ def annotate_dataset_hybrid(dataset,
     dataset.variable_annotations = annotations
 
 
+def load_table(placement_filename,
+               sequence_key_fasta_filename=None):
+    """ Load and return a table of taxonomic placements.
+
+    If needed, use a fasta file to translate sequences to sequence
+    IDs in the table index before returning.
+
+    """
+    # First get the loading of the sequence key out of the way,
+    # where necessary.
+    # Recall the RSVs are by definition unique
+    sequence_id_map = {}
+    if sequence_key_fasta_filename is not None:
+        sequence_id_map.update(
+             fasta_to_dict(sequence_key_fasta_filename).iteritems()
+        )
+
+    # Load the placement table
+    placements = pd.read_csv(placement_filename, index_col=0)
+    placements = placements.rename(index=sequence_id_map)
+    return placements
+
+    
 def annotate_dataset_table(dataset, 
                            placement_filename,
                            sequence_key_fasta_filename=None):
@@ -196,18 +219,8 @@ def annotate_dataset_table(dataset,
     Returns: none.
 
     """
-    # First get the loading of the sequence key out of the way,
-    # where necessary.
-    # Recall the RSVs are by definition unique
-    sequence_id_map = {}
-    if sequence_key_fasta_filename is not None:
-        sequence_id_map.update(
-             fasta_to_dict(sequence_key_fasta_filename).iteritems()
-        )
-
-    # Load the placement table
-    placements = pd.read_csv(placement_filename, index_col=0)
-    placements = placements.rename(index=sequence_id_map)
+    placements = load_table(placement_filename,
+                            sequence_key_fasta_filename)
     
     # Process to label the OTUs
     otu_labels = {}
