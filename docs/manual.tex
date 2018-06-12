@@ -265,6 +265,15 @@ To generate...
   \ref{leave_one_out} below.)
 \item \textbf{Convergence diagnostic plots as PDF files:} Set
   `mixing\_diagnostics' in section `postprocessing' to True.
+\item \textbf{Convergence diagnostic measures:} Set
+  `mixing\_diagnostics' in section `postprocessing' to True, and use
+  the options described in section \ref{replicates} below to run
+  multiple independent MCMC chains. Then, use the separate command
+  line utility \texttt{mitre\_mcmc\_diagnostics} to calculate $\hat R$
+  values (after Gelman \textit{et al.}, \textit{Bayesian Data
+    Analysis}, 3rd ed, pp. 284-285) for assorted variables using the
+  output tables from the independent runs (refer to that utility's
+  usage message by running \texttt{mitre\_mcmc\_diagnostics -h}).
 \item \textbf{The full suite of outputs necessary to compare MITRE
   performance against alternative methods:} See section
   \ref{benchmarking} below.

@@ -46,7 +46,7 @@ setup(
     long_description=readme(),
     url='http://github.com/gerberlab/mitre',
     author='Eli Bogart',
-    author_email='ebogart@bwh.harvard.edu',
+    author_email='eli@elibogart.net',
     license='GPLv3',
     install_requires = [
         'numpy', 
@@ -62,7 +62,9 @@ setup(
               'mitre.trees', 'mitre.comparison_methods'],
     ext_modules = extensions,
     include_package_data=True,
-    entry_points = {'console_scripts': ['mitre=mitre.command_line:run']},
+    entry_points = {'console_scripts':
+                    ['mitre=mitre.command_line:run',
+                     'mitre_mcmc_diagnostics=mitre.mcmc_diagnostics:run']},
     zip_safe=False,
     cmdclass = {'build_ext': BuildExt},
     classifiers = classifiers,
