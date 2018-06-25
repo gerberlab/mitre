@@ -1502,6 +1502,7 @@ def setup_model(config, data=None):
         'hyperparameter_beta_m',
         'window_concentration_typical',
         'window_concentration_update_ratio',
+        'window_fraction_proposal_std',
         'hyperparameter_a_empty',
         'hyperparameter_b_empty',
         'max_thresholds',

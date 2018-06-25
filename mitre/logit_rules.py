@@ -89,6 +89,7 @@ class LogisticRuleModel(DiscreteRuleModel):
                  hyperparameter_beta_primitives=4.0,
                  window_concentration_typical=5.0,
                  window_concentration_update_ratio=0.2,
+                 window_fraction_proposal_std=0.2,
                  n_workers=default_n_workers,
                  N_intervals=10, 
                  hyperparameter_a_empty=0.5,
@@ -150,6 +151,8 @@ class LogisticRuleModel(DiscreteRuleModel):
 
         self.window_concentration_typical = window_concentration_typical
         self.window_concentration_update_ratio = window_concentration_update_ratio
+
+        self.window_fraction_proposal_std = window_fraction_proposal_std
 
         self.window_duration_epsilon = 0.01 # epsilon_w
 
@@ -549,9 +552,7 @@ class LogisticRuleSampler(RuleListSampler):
             0.5*self.model.phylogeny_delta_l
         )
         self.window_fraction_proposal_std = (
-            self.model.tmin /
-            (self.model.data.experiment_end - 
-             self.model.data.experiment_start)
+            self.model.window_fraction_proposal_std
         )
         self.window_concentration_proposal_std = (
             self.model.window_concentration_typical *
