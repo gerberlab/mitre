@@ -206,6 +206,11 @@ def benchmark(config):
     # STEP 6: RUN MITRE
     model = setup_model(config, data=data)
 
+    diagnostic_output_n_detectors = len(model.rule_population)
+    with open(config.get('description','tag') + '.detector.pool.size','w') as f:
+        f.write('%d' % diagnostic_output_n_detectors)
+        f.write('\n')
+    
     if config.has_section('crossvalidation'):
         crossvalidate(config, model=model)
     elif config.has_section('leave_one_out'):
@@ -908,6 +913,12 @@ def k_fold_comparison(config, data=None, extra_descriptor=''):
         f.write('\n')
     logger.info('Comparison method results written to %s' % filename)
 
+    with open(prefix + extra_descriptor + 'comparison.data_matrix_size', 'w') as f:
+        f.write(str(l1.fit_X.shape))
+        f.write('\n')
+        f.write(str(rf.fit_X.shape))
+        f.write('\n')
+        
 def classifier_accuracy_report(true_y, prediction):
     auc = roc_auc_score(true_y.astype(float), prediction.astype(float))
     conf = confusion_matrix(true_y, prediction)
@@ -1447,6 +1458,7 @@ def leave_one_out_comparison(config, data=None, extra_descriptor=''):
     logger.info('Generating folds....')
     folds = leave_one_out_folds(data)
     results = []
+    diagnostic_data_shapes = []
     for label, method in comparison_methods_and_labels:
         test_true_y = []
         test_probabilities = []
@@ -1459,6 +1471,7 @@ def leave_one_out_comparison(config, data=None, extra_descriptor=''):
             # predicted probabilities of label 0, the second of label 1
             # (these sum to 1.) We want simply the probabilities of 
             # label 1.
+            diagnostic_data_shapes.append(classifier.fit_X.shape)
             probabilities = classifier.classifier.predict_proba(
                 classifier.transform_X(test)
             )[:,1]
@@ -1473,6 +1486,10 @@ def leave_one_out_comparison(config, data=None, extra_descriptor=''):
     with open(filename, 'w') as f:
         f.write(report)
     logger.info('Comparison method results written to %s' % filename)
+
+    with open(prefix + extra_descriptor + 'comparison.data_matrix_size', 'w') as f:
+        f.write(str(diagnostic_data_shapes))
+        f.write('\n')
 
 ###
 
