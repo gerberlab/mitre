@@ -297,6 +297,16 @@ def load_example(config, example_name):
         config.set('description','tag', default_parser.get(example_name, 'tag'))
     options.remove('tag')
 
+    if not config.has_option('data','outcome_variable'):
+        config.set('data','outcome_variable',
+                   default_parser.get(example_name, 'outcome_variable'))
+    options.remove('outcome_variable')
+
+    if not config.has_option('data','outcome_positive_value'):
+        config.set('data','outcome_positive_value',
+                   default_parser.get(example_name, 'outcome_positive_value'))
+    options.remove('outcome_positive_value')
+        
     # Find the directory with the relevant data files.
     data_directory = os.path.join(os.path.dirname(__file__),
                                   'example_data',
