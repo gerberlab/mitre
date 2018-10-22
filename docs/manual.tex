@@ -20,7 +20,7 @@
 %\listoffigures
 %\listoftables
 \lstset{
-basicstyle=\small, 
+basicstyle=\small,
 stringstyle=\ttfamily,
 language={},
 showstringspaces=false,
@@ -29,7 +29,7 @@ upquote=True,
 breaklines=True,
 breakatwhitespace=True,
 numbers=left
-} 
+}
 \lstdefinelanguage{Ini}
 {
     basicstyle=\ttfamily\small,
@@ -73,7 +73,7 @@ source, run
 followed by
 \begin{quote}
   \texttt{pip install mitre/}
-\end{quote} 
+\end{quote}
 (note the trailing slash.)  To
 verify that installation was succcessful, run
 \begin{quote}
@@ -113,7 +113,7 @@ for MITRE when the data is (as is typical) 16S-based abundance data.
 \subsection{Abundance table}\label{abundance_data}
 The abundance data should be provided as a comma-separated table,
 with the first row providing OTU IDs and the first column providing
-sample IDs. 
+sample IDs.
 \begin{lstlisting}[caption=Example abundance data table]
   "","OTU1","OTU2"
   "SampleID1",768,46
@@ -169,7 +169,7 @@ reference package used for placement of the OTUs. See
 \url{http://fhcrc.github.io/taxtastic/refpkg.html} for a description
 of the \texttt{pplacer} reference package components. The following
 listing is provided as an aid to identifying the appropriate file, not
-as a complete example of its necessary properties. 
+as a complete example of its necessary properties.
 
 \begin{lstlisting}[caption=Beginning of an example taxonomy table file]
 "tax_id","parent_id","rank","tax_name","root","below_root", "superkingdom","superphylum","phylum","subphylum", "class","subclass","order","below_order", "suborder","family","below_family","subfamily", "tribe","genus","below_genus","subgenus", "species_group","species_subgroup","species"
@@ -182,12 +182,12 @@ as a complete example of its necessary properties.
 \subsection{Pplacer sequence information}\label{pplacer_seq_info}
 A comma-separated-value table from the \texttt{pplacer}
 reference package used for placement of the OTUs, giving information
-about the sequences included in the reference package. See 
+about the sequences included in the reference package. See
 \url{http://fhcrc.github.io/taxtastic/refpkg.html} for a description
 of the \texttt{pplacer} reference package components.
 The following
 listing is provided as an aid to identifying the appropriate file, not
-as a complete example of its necessary properties. 
+as a complete example of its necessary properties.
 \begin{lstlisting}[caption=Beginning of an example sequence information file]
 seqname,tax_id,species_name
 S000438419,53635,Acidimicrobium ferrooxidans
@@ -277,7 +277,7 @@ To generate...
 \item \textbf{The full suite of outputs necessary to compare MITRE
   performance against alternative methods:} See section
   \ref{benchmarking} below.
-\end{itemize}  
+\end{itemize}
 
 Note that in almost all output text files, rules will be expressed in
 terms of internal variable identifiers (which may be the names of
@@ -396,7 +396,7 @@ Options allowed in section `data' are:
   required.
 \item[data\_type] `16s' (the default) or `metaphlan'. Optional. If
   `metaphlan', MITRE will expect Metaphlan clade abundance estimates
-  as input and handle them specially. 
+  as input and handle them specially.
 \item[abundance\_data] Filename or path to a table of OTU abundance
   data, formatted as described in section \ref{abundance_data} (or
   \ref{metaphlan_abundance_data}) if `data\_type' is
@@ -432,7 +432,7 @@ Options allowed in section `data' are:
     table, the positive value must be given as `1' or `0' in the
     configuration file.}  Other strings or numerical values should
   work as expected. Required, unless `load\_example' is set.
-  
+
 \item[taxonomy\_source] String specifying how taxonomic annotations
   for each variable (i.e., subtree of the overall phylogeny) should be
   generated. Valid options are `table', `pplacer', and `hybrid' (see
@@ -450,7 +450,7 @@ Options allowed in section `data' are:
 
 \item[placement\_table] Filename or path to a table of taxonomic
   placements for OTUs, as described in section \ref{placement_table}.
-  
+
 \item[pplacer\_taxa\_table] Filename or path to a table from the
   pplacer reference package, formatted as described in section
   \ref{pplacer_taxa_table}. Required if `taxonomy\_source' is
@@ -493,8 +493,8 @@ Options allowed in section `data' are:
   otherwise, all clades will have the same weight.
 \item[metaphlan\_weight\_scale] Optional float, default 1.0, ignored
   unless `data\_type' is `metaphlan'. If `metaphlan\_do\_weights' is set,
-  scale the subtree lengths by this value. 
-  
+  scale the subtree lengths by this value.
+
 \end{description}
 
 \section{Preprocessing}\label{preprocessing}
@@ -682,7 +682,7 @@ supplementary note for explanations of their significance.
   update $\delta_f$ to $f_W$ (default 0.2); see the Appendix.
 \item[delta\_l\_scale\_mean] Variance of the normal
   prior distribution of $\mu_L$ in the notation of section 1.4.3, relative
-  to $\Delta_L^2$ (default 50.0). 
+  to $\Delta_L^2$ (default 50.0).
 \item[delta\_l\_scale\_sigma] Upper bound on the range of allowed
   values for $\sigma_L$ in the notation of section 1.4.3, relative to
   $\Delta_L$ (default 25.0)
@@ -734,15 +734,15 @@ The following settings, all optional, may be specified in section `postprocessin
     otherwise, from the samples drawn as specified in the `sampling'
     section of this file.
   \item[burnin\_fraction] Number between 0 and 1 giving the fraction of
-    samples to discard as burn-in before analysis. Defaults to 0.05. 
+    samples to discard as burn-in before analysis. Defaults to 0.05.
   \item[quick\_summary] Boolean. If True, write the point summary,
     the distribution of rule set lengths, and the Bayes factor in
-    favor of the empty rule set 
+    favor of the empty rule set
     \texttt{[tag]\_quick\_summary.txt}.
   \item[full\_summary] Boolean. If True, write the point summary,
     the distribution of rule set lengths, the Bayes factor in
     favor of the empty rule set, and the highest-posterior-probability
-    rule set clusters (see section 3.3 of the MITRE supplement) to 
+    rule set clusters (see section 3.3 of the MITRE supplement) to
     \texttt{[tag]\_full\_summary.txt}.
   \item[bayes\_factor\_table] Boolean. If True, write the 10 variables
     and 10 detectors with the highest Bayes factors supporting their
@@ -767,9 +767,9 @@ The following settings, all optional, may be specified in section `postprocessin
     iteration. Results will be saved in
     \texttt{[tag]\_likelihood.pdf}, \texttt{[tag]\_prior.pdf}, etc.,
     and a table (which may grow large, as it contains one row per
-    MCMC iteration) is written to 
+    MCMC iteration) is written to
     \texttt{[tag]\_mcmc\_traces.csv}.
-    
+
 \end{description}
 
 \section{K-fold crossvalidation}\label{crossvalidation}
@@ -783,7 +783,7 @@ Required or conditionally required options in section `crossvalidation' are:
 \item[n\_folds] Integer; how many folds of cross-validation should be
   done.
 \item[parallel\_workers] Integer; how many parallel worker processes
-  should be launched. 
+  should be launched.
 \item[burnin\_fraction] Number between 0 and 1 giving the fraction of
   samples to discard as burn-in before calculating accuracy metrics
   for each fold.
@@ -854,6 +854,7 @@ in section `comparison\_methods' are:
 \end{description}
 
 \section{Simulated data}\label{simulated_data}
+\subsection{Required values}\label{simulated_data_required}
 If this section is present, a synthetic dataset will be generated and
 MITRE will then be applied to the synthetic data set as specified in
 the other sections of the configuration file. An ordinary input
@@ -861,42 +862,28 @@ dataset must be specified as usual in the `data' section, to be used
 as a template that informs the simulation of the synthetic data.
 
 Options in section `simulated\_data', all mandatory, are:
+
 \begin{description}
 \item[num\_subjects] Integer. Number of subjects to simulate.
-\item[num\_times\_sim ] Integer. Number of time points to simulate per subject.
+\item[num\_times\_sim ] Integer. Number of timepoints to simulate per subject.
 \item[time\_window\_width ] Numeric. Width of time window for the
   introduced perturbation.
-\item[min\_num\_time\_points\_in\_window] Integer. Subjects within the
-  template data set must have at least this many observations within
-  the simulation target time window to be used to train the simulation
-  model.
-\item[min\_time\_points\_in\_data ] Integer. Subjects in template data
-  set must have at least this many total observations to be used to
-  train the simulation model.
+\item[min\_time\_points\_in\_data] Numeric value. In order to be used as a template subject in the simulated data, an original subject must have at least this many timepoints.
 \item[time\_point\_std\_percent ] Float. Standard deviation of
   truncated Gaussian noise used to add irregularity to time point
-  spacing, as fraction of the average interval between time points.
-\item[include\_start\_time] Float. Simulate data points in a window
-  starting here.
-\item[include\_end\_time ] Float. Simulate data points in a window ending here.
-\item[init\_mean ] Float. Mean relative abundance for simulated clade.
+  spacing, as fraction of the average interval between timepoints.
+\item[include\_start\_time] Float. In order to be used as a template subject in the simulated data, an original subject's data must start no later than this time. The simulated data starts at this time.
+\item[include\_end\_time ] Float. In order to be used as a template subject in the simulated data, an original subject's data must end no earlier than this time. The simulated data stops at this time.
 \item[num\_perturbations] Integer, allowed values are 1 and 2. Perturb
   this many clades in subjects with positive outcome.
-\item[perturb\_mean] Float. Mean size of perturbation.
-\item[perturb\_std\_percent] Float. Standard deviation of perturbation
-  effects across subjects (as fraction of `perturb\_size').
-\item[init\_std\_percent] Float. Standard deviation of initial value
-  in time-series (as fraction of `init\_mean').
-\item[data\_std\_percent] Float. Standard deviation of measurement error
-  in time-series (as fraction of `init\_mean').
-\item[time\_std\_percent] Float. Day to day standard deviation
-  (as fraction of `init\_mean').
+\item[data\_std\_percent] Float. Standard deviation for measurement error (as proportion of mean starting value).
+\item[time\_std\_percent] Float. Standard deviation for the abundance of the perturbed clade outside the perturbaton window at each time step (as proportion of $\exp(\text{control\_log\_mean})$).
 \item[min\_clade\_abundance] Float. When picking clades to perturb,
   minimum abundance in any subject/time point.
 \item[max\_clade\_abundance ] Float. When picking clades to perturb,
   maximum abundance in any subject/time point.
 \item[max\_otus\_in\_clade ] Integer. When picking clades to perturb,
-  maximum number of OTUs allowd.
+  maximum number of OTUs allowed.
 \item[pickle\_simulation\_result] Boolean. If true, save simulated
   dataset to pickle before proceeding.
 \item[save\_perturbation\_info ] Boolean. If true, write a text file
@@ -905,14 +892,30 @@ Options in section `simulated\_data', all mandatory, are:
 \item[counts\_concentration ] Float. Concentration parameter for
   Dirichlet-multinomial distribution for count data.
 \item[num\_counts ] Int. Number of sequencing reads to simulate.
+\item[case\_log\_mean] Float. The abundance $X$ of the perturbed clade during the perturbation period is drawn from a log-normal distribution. ($Z \sim \text{Normal}(\mu, \sigma)$, $X = e^Z$). This option specifies the mean parameter ($\mu$) for the log-normal distribution.
+\item[case\_log\_std] Float. The standard deviation parameter ($\sigma$) for the case log-normal distribution.
+\item[control\_log\_mean] Float. In the control subjects, the clade that is being perturbed in the case subjects also has its abundance drawn from a log-normal distribution, but with different parameters. This option sets the mean parameter.
+\item[control\_log\_std] Float. The standard deviation parameter for the control log-normal distribution.
+\item[control\_gets\_one\_pert] Boolean. When the case subjects are receiving 2 perturbations, setting this option to True will result in all of the control subjects receiving one of the perturbations that is being given to the cases. If False, the control subjects will receive no perturbation.
+\end{description}
 
+\subsection{Multiple simulations}
+Multiple simulations with different numbers of subjects and timepoints can be performed to study the effect of these study design parameters on the performance of MITRE and the comparator methods. The following steps indicate a procedure for performing an investigation of this type.
+\begin{enumerate}
+  \item Generate the master dataset with the maximum numbers of subjects and timepoints to analyze. Prepare a configuration file with the desired simulated\_data settings (see \ref{simulated_data_required}). With the setting pickle\_simulation\_result = True, this master dataset will be saved as a pickle file.
+  \item The MITRE software distribution includes a script (subsample.py) which will generate subsampled versions of the master dataset with user-specified numbers of subjects and timepoints. This script is run from the command line. The first command line argument must contain the pickle file of the original simulated dataset which will be subsampled. To choose how many subjects and timepoints to subsample, use the arguments \texttt{-{}-timepoints} and \texttt{-{}-subjects} followed by the desired numbers of timepoints and subjects. The final optional argument is \texttt{-{}-filename\_add}, which can be used to supply a string that will be appended to each filename when the subsampled datasets are saved. To subsample only subjects or only timepoints, do not use the other argument. The program will save the subsampled datasets as pickles. For example, to subsample master.pkl, selecting 48, 32, and 20 subjects, and 24, 18, 12, and 6 timepoints, run: \texttt{python subsample.py master.pkl -{}-subjects 48 32 20 -{}-timepoints 24 18 12 6}
+  \item Run MITRE using a configuration file with the benchmarking section present (see \ref{benchmarking}) on each of these subsampled datasets as well as the master dataset. To load the pickles, use the optional setting load\_previous\_simulation\_result in the simulated\_data section of the configuration file.
+\end{enumerate}
+The `simulated\_data' section of the configuration file has an optional setting which facilitates the loading of these subsampled simulated datasets:
+\begin{description}
+  \item[load\_previous\_simulation\_result] String. This option can be used to load a pickle file of the sort that is outputted when pickle\_simulation\_result is set to True. If this option is supplied, actual simulation is bypassed and all other `simulated\_data' options can be ignored. The purpose of this option is to allow a simulated dataset to be loaded at the correct stage of the MITRE benchmarking algorithm. The load\_data\_from\_pickle option in the `benchmarking' section assumes that the dataset has already been subjected to the preprocess\_step1 function, which applies a number of filters and transformations. Therefore, to load simulated dataset pickles in the form that is outputted by the simulator (i.e., before these filters and transformations have been applied), it is more convenient to use this option.
 \end{description}
 
 \section{Benchmarking}\label{benchmarking}
 If this section is present:
 \begin{enumerate}
 \item Data is loaded following the options in the `preprocessing' section
-    normally, through the step of conversion to relative abundance. 
+    normally, through the step of conversion to relative abundance.
 
 \item The first comparison-methods crossvalidation is run immediately,
   following the options specified in the `comparison' section of the
@@ -933,7 +936,7 @@ If this section is present:
   and log transformation. A third comparison-methods crossvalidation
   is run. The resulting report will be labeled
   \texttt{[tag]\_benchmark\_step5\_comparison.txt}.
-    
+
 \item The dataset is used for MITRE crossvalidation, following the
   options specified in the `model' and `crossvalidation' or
   `leave\_one\_out' section of the configuration file as usual.
@@ -973,7 +976,7 @@ included with the MITRE distribution.)
 
 \begin{lstlisting}[language=Ini,caption=Template MITRE configuration file,numbers=none]
 # Note: comments placed on their own lines
-# may start with ';' or '#', but 
+# may start with ';' or '#', but
 # inline comments should start only with ';'.
 
 [description]
@@ -988,14 +991,14 @@ jplace_file = /path/to/your_data/placements.jplace
 outcome_variable = diet
 outcome_positive_value = Plant
 taxonomy_source = hybrid
-pplacer_taxa_table = /path/to/your_data/taxaTable.csv 
+pplacer_taxa_table = /path/to/your_data/taxaTable.csv
 pplacer_seq_info = /path/to/your_data/seq_info.csv
 placement_table = /path/to/your_data/mothur_placements.csv
 
 [preprocessing]
 # Note that the order of these options in the configuration file is
 # not important. Those filters and transformations selected will be
-# applied in the following order: 
+# applied in the following order:
 # overall abundance filter, sample depth filter, window trimming,
 # temporal sampling density filter, relative abundance
 # transformation, phylogenetic aggregation, log transform,
@@ -1010,7 +1013,7 @@ min_sample_reads = 5000
 # trim_start = 20
 # trim_stop = 30
 # Discard subjects with insufficiently dense temporal sampling:
-# divide the window up into n_intervals equal pieces, 
+# divide the window up into n_intervals equal pieces,
 # then require at least n_samples within every n_consecutive
 # consecutive such pieces
 # We don't actually need to do this here, the sampling density
@@ -1018,14 +1021,14 @@ min_sample_reads = 5000
 # density_filter_n_samples = 1
 # density_filter_n_intervals = 12
 # density_filter_n_consecutive = 2
-# Select which transformations should be applied to the data. 
+# Select which transformations should be applied to the data.
 take_relative_abundance = True
 aggregate_on_phylogeny = True
 log_transform = False
-# Temporal abundance filtration: keep only those taxa which 
+# Temporal abundance filtration: keep only those taxa which
 # exceed a threshold abundance in multiple consecutive observations
-# at least once in a minimum number of subjects. Note that the 
-# threshold should be on a log scale if the log transform has been 
+# at least once in a minimum number of subjects. Note that the
+# threshold should be on a log scale if the log transform has been
 # performed.
 temporal_abundance_threshold = 0.001
 temporal_abundance_consecutive_samples = 2
@@ -1047,7 +1050,7 @@ t_min = 1.0
 t_max = 7.0
 pickle_model = True
 
-[sampling] 
+[sampling]
 total_samples = 50000
 
 [postprocessing]
