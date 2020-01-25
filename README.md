@@ -156,14 +156,11 @@ and supplementary note of the MITRE manuscript (reference below.)
 
 ### References
 
-"MITRE: predicting host status from microbiota time-series data", Elijah Bogart, Richard Creswell, and Georg K. Gerber (in preparation; [preprint available](https://www.biorxiv.org/content/10.1101/447250v1))
+Bogart, E., Creswell, R. & Gerber, G.K. "MITRE: inferring features from microbiota time-series data linked to host status." [Genome Biol 20, 186 (2019)](https://doi.org/10.1186/s13059-019-1788-y).
+
+Also available in earlier [preprint](https://www.biorxiv.org/content/10.1101/447250v1) form, with a title that communicates rather than obfuscates: "MITRE: predicting host status from microbiota time-series data", Elijah Bogart, Richard Creswell, and Georg K. Gerber. 
 
 ### License information
 
 Copyright 2017-2019 Eli Bogart, Richard Creswell, the Gerber Lab, and Brigham and Women's Hospital.
 Released under the GNU General Public License version 3.0, see LICENSE.txt. 
-
-
-
-
-
