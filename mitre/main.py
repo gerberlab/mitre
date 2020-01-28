@@ -726,7 +726,7 @@ def preprocess_step2(config, data):
     data = temporal_filter_if_needed(config, data)
 
     # 3i. Surplus internal node removal.
-    if config.has_option('preprocessing', 'discard_surplus_internal_nodes'):
+    if has_tree and config.has_option('preprocessing', 'discard_surplus_internal_nodes'):
         if config.getboolean('preprocessing',
                              'discard_surplus_internal_nodes'):
             logger.info('Removing surplus internal nodes...')
