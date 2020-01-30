@@ -192,6 +192,10 @@ def combine_data(abundance_data,
             continue
         max_observation_times.append(max(timepoints))
         min_observation_times.append(min(timepoints))
+    # If we haven't found a valid observation for any subject
+    # we cannot proceed.
+    if not min_observation_times:
+        raise ValueError("Could not locate data for any specified sample- is your abundance data matrix properly formatted, with a row for each sample specified in the sample metadata table?")
     if experiment_start is None:
         experiment_start = min(min_observation_times)
     if experiment_end is None:
