@@ -305,7 +305,7 @@ def resample_otus(subjID, otu_table, config, clades, times, sim_times, time_wind
         clade = clades[ci]
         clade_prop = resampled_otus[clade, :].copy()
         total_clade = numpy.sum(clade_prop, 0)
-        clade_prop = clade_prop / total_clade
+        clade_prop = numpy.nan_to_num(clade_prop / total_clade)
         clade_props.append(clade_prop)
 
         # take out values, so we can inject simulated clade
